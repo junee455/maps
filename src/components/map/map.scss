@@ -1,0 +1,37 @@
+.map-component {
+    display: flex;
+}
+#menu {
+    width: 20%;
+    padding: 20px;
+    background-color: #e0e0e0;
+}
+#three-canvas {
+    width: 80%;
+}
+
+.hide-button {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+}
+
+.show-button {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+}
+
+.floor-button {
+    user-select: none;
+    line-height: 0.7em;
+    background-color: white;
+    border: 3px solid transparent;
+    border-radius: 5px;
+    margin: 5px;
+    width: fit-content;
+    padding: 2px;
+    &.active {
+        border: 3px solid #747cc5;
+    }
+}

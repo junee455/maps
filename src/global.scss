@@ -1,0 +1,22 @@
+* {
+	position: relative;
+	font-family: 'Roboto', sans-serif;
+}
+
+#app,body {
+	height: 100%;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	border: none;
+	box-sizing: border-box;
+}
+
+#app > * {
+	height: 100%;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	border: none;
+	box-sizing: border-box;
+}
