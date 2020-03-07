@@ -2,17 +2,34 @@
   <div class="map-component">
     <div id="menu"
     v-if="menuShown">
-    <div v-for="(floor, index) of theMap.floors"
-    class="floor-button"
-    :class="(index === focusedFloor) ? 'active': ''"
-    @click="focusFloor(index)">{{index + 1}}</div>
-      <!-- <div class="floor-button">one</div> -->
-      <!-- <div class="floor-button">two</div> -->
-      <!-- <div class="floor-button">three</div> -->
-      <div class="hide-button"
+			<div style="display: flex">
+				<div v-for="(floor, index) of theMap.floors"
+				class="floor-button"
+				:class="(index === focusedFloor) ? 'active': ''"
+				@click="focusFloor(index)">{{index + 1}}</div>
+			</div>
+      <!-- <div class="hide-button" -->
       <!-- @click="menuShown = !menuShown"><<</div> -->
       <div class="floor-button"
       @click="theMap.floorHeight = (theMap.floorHeight == 15) ? 40 : 15">{{ (theMap.floorHeight == 15) ? 'expand' : 'shrink' }}</div>
+			<div class="cabinets-container">
+				<div v-for="(cabinet, index) of dotsData">
+					<div @click="toggleDropDown(index)"
+											 class="cabinet-button">{{cabinet.number}}</div>
+					<div v-if="activeDropDown === index">
+						<input name=""
+									 type="text"
+									 v-model="cabinet.number"/>
+						<input name=""
+									 type="number"
+									 v-model="cabinet.pos[0]"/>
+						<input name=""
+									 type="number"
+									 v-model="cabinet.pos[1]"/>
+					</div>
+				</div>
+			</div>
+
     </div>
     
     <div id="three-canvas">
@@ -20,6 +37,10 @@
     <div class="show-button"
     v-if="!menuShown"
       @click="menuShown = !menuShown">show</div>
+		<div v-if="activeDropDown !== undefined"
+				 v-bind:style="{bottom: highlitedPoint.y - 6.5 + 'px',
+left: highlitedPoint.x - 6.5 + 'px'}"
+				 class="point-highlight"></div>
   </div>
 </template>
 

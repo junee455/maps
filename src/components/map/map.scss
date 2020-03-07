@@ -3,8 +3,10 @@
 }
 #menu {
     width: 20%;
-    padding: 20px;
+    padding: 10px;
     background-color: #e0e0e0;
+		display: flex;
+		flex-direction: column;
 }
 #three-canvas {
     width: 80%;
@@ -22,6 +24,34 @@
     left: 10px;
 }
 
+.cabinets-container {
+		input {
+				margin: 2px;
+				margin-left: 20px;
+		}
+
+		padding: 5px;
+		border-radius: 5px;
+		background-color: white;
+		height: auto;
+		overflow-y: scroll;
+}
+
+.cabinet-button {
+		user-select: none;
+		padding: 5px;
+		border-radius: 5px;
+		&:before {
+				color: transparent;
+				content: "▼";
+		}
+		&:hover {
+				&:before {
+						color: inherit;
+				}
+		}
+}
+
 .floor-button {
     user-select: none;
     line-height: 0.7em;
@@ -34,4 +64,13 @@
     &.active {
         border: 3px solid #747cc5;
     }
+}
+
+.point-highlight {
+		position: fixed;
+		content: "";
+		width: 13px;
+		height: 13px;
+		border-radius: 5px;
+		background-color: blue;
 }
