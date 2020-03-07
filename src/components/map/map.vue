@@ -3,13 +3,6 @@
     <div id="menu"
 				 v-if="menuShown">
 			<div style="display: flex">
-				<div class="floor-button decorator"
-						 @click="theMap.floorHeight = (theMap.floorHeight == 15) ? 40 : 15">{{ (theMap.floorHeight == 15) ? 'expand' : 'shrink' }}</div>
-				<a class="floor-button decorator"
-					 id="download-button"
-					 @click="downloadLayout()">download layout</a>
-			</div>
-			<div style="display: flex">
 				<div v-for="(floor, index) of theMap.floors"
 										class="floor-button decorator"
 										:class="(index === focusedFloor) ? 'active': ''"
@@ -45,7 +38,13 @@
 				</div>
 
 			</div>
-
+			<div style="display: flex; position: absolute; bottom: 0">
+				<div class="floor-button decorator"
+						 @click="theMap.floorHeight = (theMap.floorHeight == 15) ? 40 : 15">{{ (theMap.floorHeight == 15) ? 'expand' : 'shrink' }}</div>
+				<a class="floor-button decorator"
+					 id="download-button"
+					 @click="downloadLayout()">download layout</a>
+			</div>
     </div>
     
     <div id="three-canvas">
@@ -54,8 +53,8 @@
 				 v-if="!menuShown"
 				 @click="menuShown = !menuShown">show</div>
 		<div v-if="activeDropDown !== undefined"
-				 v-bind:style="{bottom: highlitedPoint.y - 6.5 + 'px',
-							 left: highlitedPoint.x - 6.5 + 'px'}"
+				 v-bind:style="{bottom: highlitedPoint.y - 10 + 'px',
+							 left: highlitedPoint.x - 10 + 'px'}"
 				 class="point-highlight"></div>
   </div>
 </template>
