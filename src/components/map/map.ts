@@ -11,12 +11,13 @@ function initRender() {
 let theMap: FloorMap = new FloorMap()
 theMap.floorHeight = 40;
 let camera: THREE.OrthographicCamera
-let dotsData: Array<{number: string, pos: Array<number>}>
+let dotsData: any
 let render: THREE.WebGLRenderer
-let dotsScene: THREE.Scene
+let dotsScene: Array<THREE.Scene> = []
 let scene = new THREE.Scene();
 let canvasEl: HTMLElement
 let needUpdate = false;
+let projectionInited = false;
 
 let fileLoaded = false;
 
@@ -39,10 +40,6 @@ export default class Map extends Vue{
 		theMap.loadMapOBJ('http://localhost:8080/floor1.obj', transparentMaterial, floorTexture, scene);
 		theMap.loadMapOBJ('http://localhost:8080/testmap2.obj', transparentMaterial, floorTexture, scene);
 		theMap.loadMapOBJ('http://localhost:8080/testmap3.obj', transparentMaterial, floorTexture, scene);
-		
-		
-		dotsScene = new THREE.Scene();
-		
 		
 		
 		// secondFloor.loadMapOBJ('http://localhost:8080/testmap3.obj', transparentMaterial, floorTexture, scene);
@@ -95,7 +92,7 @@ export default class Map extends Vue{
 			menuShown: true,
 			theMap: theMap,
 			// focused floor index
-			focusedFloor: null,
+			focusedFloor: undefined,
 			dotsData: dotsData,
 			highlitedPoint: {
 				x: undefined,
@@ -106,7 +103,7 @@ export default class Map extends Vue{
 	}
 
 	downloadLayout() {
-		let data = "data:text/json;charset=utf-8," + JSON.stringify(this.dotsData)
+		let data = "data:text/json;charset=utf-8," + JSON.stringify(this.dotsData);
 		let button = document.getElementById("download-button");
 		button.setAttribute("href", data)
 		button.setAttribute("download", "cabinets.json");
@@ -126,35 +123,36 @@ export default class Map extends Vue{
 			this.focusedFloor = null
 			return
 		}
+		this.activeDropDown = undefined;
 		this.theMap.focusFloor(index);
 		this.focusedFloor = index
 	}
 
-	@Watch('dotsData', {deep: true})
-	onDataChanged(newData, oldData) {
+	// @Watch('dotsData', {deep: true})
+	// onDataChanged(newData, oldData) {
 		
-		dotsScene.traverse(val => {
-			if(val instanceof THREE.Points && val.geometry instanceof THREE.Geometry) {
+	// 	dotsScene.traverse(val => {
+	// 		if(val instanceof THREE.Points && val.geometry instanceof THREE.Geometry) {
 				
-				val.geometry.vertices = newData.map(point => {
-					return new THREE.Vector3(parseFloat(point.pos[0]), parseFloat(point.pos[1]), 0);
-				})
+	// 			val.geometry.vertices = newData.map(point => {
+	// 				return new THREE.Vector3(parseFloat(point.pos[0]), parseFloat(point.pos[1]), 0);
+	// 			})
 				
-				val.geometry.setFromPoints(val.geometry.vertices);
+	// 			val.geometry.setFromPoints(val.geometry.vertices);
 				
-				val.geometry.verticesNeedUpdate = true;
-			}
-		})
+	// 			val.geometry.verticesNeedUpdate = true;
+	// 		}
+	// 	})
 		
-		if(this.activeDropDown !== undefined) {
-			this.highlitedPoint = this.projectPoint(this.activeDropDown);
-			this.dotsProjection[this.activeDropDown] = this.highlitedPoint;
-		}
-	}
+	// 	if(this.activeDropDown !== undefined) {
+	// 		this.highlitedPoint = this.projectPoint(this.activeDropDown);
+	// 		this.dotsProjection[this.activeDropDown] = this.highlitedPoint;
+	// 	}
+	// }
 	
-	projectPoint(index) {
+	projectPoint(index, floor) {
 		let vec3: any;
-		dotsScene.traverse(val => {
+		dotsScene[floor].traverse(val => {
 			if(val instanceof THREE.Points && val.geometry instanceof THREE.Geometry) {
 				camera.updateMatrixWorld();
 				
@@ -175,8 +173,8 @@ export default class Map extends Vue{
 	onActiveDropDownChange(newData, oldData) {
 		console.log("data change", newData);
 		if(newData !== undefined) {
-			this.highlitedPoint = this.projectPoint(newData);
-			this.dotsProjection[newData] = this.highlitedPoint;
+			this.highlitedPoint = this.projectPoint(newData, this.focusedFloor);
+			this.dotsProjection[this.focusedFloor][newData] = this.highlitedPoint;
 		}
 	}
 	
@@ -184,8 +182,8 @@ export default class Map extends Vue{
 
 	}
 	
-	movePoint(x, y, index) {
-		dotsScene.traverse((obj) => {
+	movePoint(x, y, index, floor) {
+		dotsScene[floor].traverse((obj) => {
 			if(obj instanceof THREE.Points) {
 				if(obj.geometry instanceof THREE.Geometry) {
 					obj.geometry.vertices[index] = new THREE.Vector3(
@@ -193,19 +191,83 @@ export default class Map extends Vue{
 						(-y + canvasEl.scrollHeight / 2) / camera.zoom,
 						0);
 					
-					this.dotsData[index].pos[0] = (x - canvasEl.scrollWidth / 2) / camera.zoom;
-					this.dotsData[index].pos[1] = (-y + canvasEl.scrollHeight / 2) / camera.zoom;
+					this.dotsData[floor][index].pos[0] = (x - canvasEl.scrollWidth / 2) / camera.zoom;
+					this.dotsData[floor][index].pos[1] = (-y + canvasEl.scrollHeight / 2) / camera.zoom;
 					obj.geometry.verticesNeedUpdate = true;
 				}
 			}
 		})
 	}
 	
-	deletePoint(index) {
-		this.dotsData.splice(index, 1)
-		for(let index in this.dotsData)
-				this.dotsProjection.push(this.projectPoint(index));
+	deletePoint(index, floor) {
+		this.dotsData[floor].splice(index, 1)
+		this.dotsProjection[floor] = []
 
+		
+		dotsScene[floor].traverse((obj) => {
+			if(obj instanceof THREE.Points) {
+				if(obj.geometry instanceof THREE.Geometry) {
+					
+					obj.geometry.vertices.splice(index, 1)
+					obj.geometry.setFromPoints(obj.geometry.vertices);
+					
+					obj.geometry.verticesNeedUpdate = true;
+					obj.geometry.elementsNeedUpdate = true;
+					
+					dotsScene[floor].add(new THREE.Points(obj.geometry.clone(), new THREE.PointsMaterial({color: "#ff5555", size: 10})));
+					
+					dotsScene[floor].remove(obj);
+					
+					obj.geometry.dispose();
+					
+				}
+				obj.geometry.dispose();
+			}
+		})
+		
+		for(let index in this.dotsData[floor])
+			this.dotsProjection[floor].push(this.projectPoint(index, floor));
+		
+		this.activeDropDown = undefined;
+	}
+	
+	putPoint(floor, x = canvasEl.scrollWidth / 2, y = canvasEl.scrollHeight / 2) {
+		console.log(dotsScene);
+
+		dotsScene[floor].traverse((obj) => {
+			if(obj instanceof THREE.Points) {
+				if(obj.geometry instanceof THREE.Geometry) {
+					obj.geometry.vertices.push(new THREE.Vector3(
+						(x - canvasEl.scrollWidth / 2) / camera.zoom,
+						(-y + canvasEl.scrollHeight / 2) / camera.zoom,
+						0));
+					
+					this.dotsData[floor].push({
+						number: "Новая точка",
+						pos: [
+							(x - canvasEl.scrollWidth / 2) / camera.zoom,
+							(-y + canvasEl.scrollHeight / 2) / camera.zoom
+						]
+					});
+					
+					obj.geometry.setFromPoints(obj.geometry.vertices);
+					
+					obj.geometry.verticesNeedUpdate = true;
+					obj.geometry.elementsNeedUpdate = true;
+					
+					dotsScene[floor].add(new THREE.Points(obj.geometry.clone(), new THREE.PointsMaterial({color: "#ff5555", size: 10})));
+					
+					dotsScene[floor].remove(obj);
+					
+					obj.geometry.dispose();
+					
+				}
+				obj.geometry.dispose();
+			}
+		})
+		for(let index in this.dotsData[floor])
+			this.dotsProjection[floor][index] = this.projectPoint(index, floor);
+		this.activeDropDown = this.dotsData[floor].length - 1;
 	}
 	
 	mounted() {
@@ -213,22 +275,23 @@ export default class Map extends Vue{
 
 		axios.get('http://localhost:8080/cabinets.json').then(res => {
 
-			let dots: THREE.Geometry = new THREE.Geometry();
+			let dots: Array<THREE.Geometry> = [];
 			
 			// console.log(res.data);
 			
 			dotsData = res.data;
 			// dots.vertices.push(new THREE.Vector3(0, 0, -200));
 			
-			dotsData = dotsData.map(val => {
-				dots.vertices.push(new THREE.Vector3(...val.pos, 0));
-				return val;
-			})
-
 			this.dotsData = dotsData;
-			
-			dotsScene.add(new THREE.Points(dots, new THREE.PointsMaterial({color: "#ff5555", size: 10})));
-			
+
+			dotsData.map((floorDots, index) => {
+				dots.push(new THREE.Geometry());
+				floorDots.map((val) => {
+					dots[index].vertices.push(new THREE.Vector3(...val.pos, 0));
+				})
+				dotsScene.push(new THREE.Scene());
+				dotsScene[index].add(new THREE.Points(dots[index], new THREE.PointsMaterial({color: "#ff5555", size: 10})));
+			})
 			
 			fileLoaded = true;
 			
@@ -268,39 +331,7 @@ export default class Map extends Vue{
 		
 		
 		
-		let putPoint = (x, y) => {
-			dotsScene.traverse((obj) => {
-				if(obj instanceof THREE.Points) {
-					if(obj.geometry instanceof THREE.Geometry) {
-						obj.geometry.vertices.push(new THREE.Vector3(
-							(x - canvasEl.scrollWidth / 2) / camera.zoom,
-							(-y + canvasEl.scrollHeight / 2) / camera.zoom,
-							0));
-						
-						this.dotsData.push({
-							number: "Новая точка",
-							pos: [
-								(x - canvasEl.scrollWidth / 2) / camera.zoom,
-								(-y + canvasEl.scrollHeight / 2) / camera.zoom
-							]
-						});
-						
-						obj.geometry.setFromPoints(obj.geometry.vertices);
-						
-						obj.geometry.verticesNeedUpdate = true;
-						obj.geometry.elementsNeedUpdate = true;
-						
-						dotsScene.add(new THREE.Points(obj.geometry.clone(), new THREE.PointsMaterial({color: "#ff5555", size: 10})));
-						
-						dotsScene.remove(obj);
-						
-						obj.geometry.dispose();
-						
-					}
-					obj.geometry.dispose();
-				}
-			})
-		}
+
 		
 		window.addEventListener('mousemove', (e) => {
 			if(theMap && mouseMiddlePressed) {
@@ -310,9 +341,9 @@ export default class Map extends Vue{
 			if(mouseLeftPressed && this.activeDropDown !== undefined) {
 				if(e.clientX < canvasEl.offsetLeft)
 					return
-				this.movePoint(e.clientX - canvasEl.offsetLeft, e.clientY, this.activeDropDown);
-				this.highlitedPoint = this.projectPoint(this.activeDropDown);
-				this.dotsProjection[this.activeDropDown] = this.highlitedPoint
+				this.movePoint(e.clientX - canvasEl.offsetLeft, e.clientY, this.activeDropDown, this.focusedFloor);
+				this.highlitedPoint = this.projectPoint(this.activeDropDown, this.focusedFloor);
+				this.dotsProjection[this.focusedFloor][this.activeDropDown] = this.highlitedPoint
 			}
 		})
 		
@@ -321,6 +352,9 @@ export default class Map extends Vue{
 			// if(camera.zoom > 3) camera.zoom = 3;
 			// if(camera.zoom < 1) camera.zoom = 1;
 			camera.updateProjectionMatrix();
+			for(let index in this.dotsData)
+				this.dotsProjection[this.focusedFloor][index] = this.projectPoint(index, this.focusedFloor);
+			this.highlitedPoint = this.dotsProjection[this.activeDropDown];
 		})
 		
 		camera = new THREE.OrthographicCamera( canvasEl.scrollWidth / -2,
@@ -346,7 +380,7 @@ export default class Map extends Vue{
 				return
 			console.log(ev);
 			let index = undefined;
-			this.dotsProjection.map((point, _index) => {
+			this.dotsProjection[this.focusedFloor].map((point, _index) => {
 				let delta = (point.x - x) ** 2 + (point.y - y) ** 2
 				if(delta < 25) {
 					index = _index
@@ -379,8 +413,8 @@ export default class Map extends Vue{
 		// 	})
 		
 		
-		for(let index in this.dotsData)
-				this.dotsProjection.push(this.projectPoint(index));
+		// for(let index in this.dotsData)
+		// 		this.dotsProjection.push(this.projectPoint(index));
 
 		
 		let context = render.getContext();
@@ -391,9 +425,13 @@ export default class Map extends Vue{
 			requestAnimationFrame(animate);
 			
 			
-			if(fileLoaded && !this.dotsProjection.length) {
-				for(let index in this.dotsData)
-          this.dotsProjection.push(this.projectPoint(index));
+			if(fileLoaded && !projectionInited) {
+				dotsData.map((floorDots, floor) => {
+					this.dotsProjection.push([]);
+					for(let index in floorDots)
+						this.dotsProjection[floor].push(this.projectPoint(index, floor));	
+				})
+				projectionInited = true;
 			}
 			
 			initMask(render);
@@ -402,8 +440,10 @@ export default class Map extends Vue{
 			theMap.renderMap(render, scene, camera);
 			disposeMask(render);
 			context.clear(context.DEPTH_BUFFER_BIT || context.STENCIL_BUFFER_BIT);
-			if(dotsScene) {
-				render.render(dotsScene, camera);
+			if(this.focusedFloor !== undefined) {
+				if(dotsScene[this.focusedFloor]) {
+					render.render(dotsScene[this.focusedFloor], camera);
+				}
 			}
 			
 			

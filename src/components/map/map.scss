@@ -1,10 +1,14 @@
+* {
+		color: #002b36;
+}
+
 .map-component {
     display: flex;
 }
 #menu {
     width: 20%;
-    padding: 10px;
-    background-color: #e0e0e0;
+    // padding: 10px;
+    background-color: #fdf6e3;
 		display: flex;
 		flex-direction: column;
 }
@@ -24,15 +28,36 @@
     left: 10px;
 }
 
+.decorator {
+		border-bottom: solid 2px #93a1a1;
+		transition: 0.1s;
+		&:hover {
+				color: #fdf6e3;
+				background-color: #586e75;
+				border-bottom: solid 2px #586e75;
+		}
+}
+
 .cabinets-container {
+		min-height: 50px;
+		
 		input {
+				font-family: "Courier New", Courier, monospace;
+				background-color: #fdf6e3;
 				margin: 2px;
 				margin-left: 20px;
+				padding: 3px;
+				outline: none;
+				border: none;
+				border-bottom: solid 2px #93a1a1;
+				&:focus {
+						border-bottom: solid 2px #586e75;
+				}
 		}
 
 		padding: 5px;
-		border-radius: 5px;
-		background-color: white;
+		// border-radius: 5px;
+		// background-color: white;
 		height: auto;
 		overflow-y: scroll;
 }
@@ -56,18 +81,19 @@
 .floor-button {
     user-select: none;
     line-height: 0.7em;
-    background-color: white;
-    border: 3px solid transparent;
-    border-radius: 5px;
+    // background-color: white;
+    // border-radius: 5px;
     margin: 5px;
     width: fit-content;
-    padding: 2px;
+    padding: 5px;
     &.active {
-        border: 3px solid #747cc5;
+				color: #fdf6e3;
+				background-color: #586e75;
+				border-bottom: solid 2px #586e75;
     }
 }
 
-.minus-button {
+.round-button {
 		font-size: 20px;
 		margin-right: 20px;
 		// padding-left: 10px;
@@ -77,8 +103,8 @@
 		height: 30px;
 		text-align: center;
 		cursor: default;
-		color: white;
-		background-color: grey;
+		color: #fdf6e3;
+		background-color: #586e75;
 		border-radius: 15px;
 }
 
@@ -89,4 +115,16 @@
 		height: 13px;
 		border-radius: 5px;
 		background-color: blue;
+}
+
+#delete-point {
+		position: absolute;
+		right: 5px;
+		bottom: 0px;
+}
+
+#new-point {
+		position: absolute;
+		right: 10px;
+		top: 10px;
 }
