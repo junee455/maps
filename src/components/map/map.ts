@@ -352,8 +352,10 @@ export default class Map extends Vue{
 			// if(camera.zoom > 3) camera.zoom = 3;
 			// if(camera.zoom < 1) camera.zoom = 1;
 			camera.updateProjectionMatrix();
-			for(let index in this.dotsData)
-				this.dotsProjection[this.focusedFloor][index] = this.projectPoint(index, this.focusedFloor);
+			this.dotsData.map((floorDots, floor) => {
+			for(let index in floorDots)
+				this.dotsProjection[floor][index] = this.projectPoint(index, floor);
+			})
 			this.highlitedPoint = this.dotsProjection[this.activeDropDown];
 		})
 		
