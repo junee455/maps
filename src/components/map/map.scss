@@ -38,6 +38,7 @@
 }
 
 .cabinet-button {
+		width: 80%;
 		user-select: none;
 		padding: 5px;
 		border-radius: 5px;
@@ -64,6 +65,21 @@
     &.active {
         border: 3px solid #747cc5;
     }
+}
+
+.minus-button {
+		font-size: 20px;
+		margin-right: 20px;
+		// padding-left: 10px;
+		// padding-right: 10px;
+		line-height: 30px;
+		width: 30px;
+		height: 30px;
+		text-align: center;
+		cursor: default;
+		color: white;
+		background-color: grey;
+		border-radius: 15px;
 }
 
 .point-highlight {

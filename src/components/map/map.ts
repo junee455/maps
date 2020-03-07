@@ -18,6 +18,8 @@ let scene = new THREE.Scene();
 let canvasEl: HTMLElement
 let needUpdate = false;
 
+let fileLoaded = false;
+
 @Component
 export default class Map extends Vue{
 	
@@ -84,6 +86,7 @@ export default class Map extends Vue{
 		light.position.set( 0, 200, 1000 );
 		scene.add( light );
 		
+		
 	}
 
 	data() {
@@ -97,10 +100,18 @@ export default class Map extends Vue{
 			highlitedPoint: {
 				x: undefined,
 				y: undefined
-			}
+			},
+			dotsProjection: []
 		}
 	}
 
+	downloadLayout() {
+		let data = "data:text/json;charset=utf-8," + JSON.stringify(this.dotsData)
+		let button = document.getElementById("download-button");
+		button.setAttribute("href", data)
+		button.setAttribute("download", "cabinets.json");
+	}
+	
 	toggleDropDown(index: number) {
 		if(index === this.activeDropDown) {
 			this.activeDropDown = undefined;
@@ -136,38 +147,64 @@ export default class Map extends Vue{
 		})
 		
 		if(this.activeDropDown !== undefined) {
-			this.projectPoint(this.activeDropDown);
+			this.highlitedPoint = this.projectPoint(this.activeDropDown);
+			this.dotsProjection[this.activeDropDown] = this.highlitedPoint;
 		}
 	}
 	
 	projectPoint(index) {
+		let vec3: any;
 		dotsScene.traverse(val => {
 			if(val instanceof THREE.Points && val.geometry instanceof THREE.Geometry) {
-				
-				let vec3 = val.geometry.vertices[index].clone().project(camera);
-				
 				camera.updateMatrixWorld();
+				
+				vec3 = val.geometry.vertices[index].clone().project(camera);
+				
 				
 				vec3.x = (vec3.x + 1) / 2 * canvasEl.scrollWidth + canvasEl.offsetLeft;
 				vec3.y = (vec3.y + 1) / 2 * canvasEl.scrollHeight;
 				
-				this.highlitedPoint.x = vec3.x;
-				this.highlitedPoint.y = vec3.y;
 				
-				// val.geometry.verticesNeedUpdate = true;
 			}
 		})
+		return {x: vec3.x,
+						y: vec3.y}
 	}
 	
 	@Watch('activeDropDown')
 	onActiveDropDownChange(newData, oldData) {
 		console.log("data change", newData);
 		if(newData !== undefined) {
-			this.projectPoint(newData);
+			this.highlitedPoint = this.projectPoint(newData);
+			this.dotsProjection[newData] = this.highlitedPoint;
 		}
 	}
 	
 	beforeUpdate() {
+
+	}
+	
+	movePoint(x, y, index) {
+		dotsScene.traverse((obj) => {
+			if(obj instanceof THREE.Points) {
+				if(obj.geometry instanceof THREE.Geometry) {
+					obj.geometry.vertices[index] = new THREE.Vector3(
+						(x - canvasEl.scrollWidth / 2) / camera.zoom,
+						(-y + canvasEl.scrollHeight / 2) / camera.zoom,
+						0);
+					
+					this.dotsData[index].pos[0] = (x - canvasEl.scrollWidth / 2) / camera.zoom;
+					this.dotsData[index].pos[1] = (-y + canvasEl.scrollHeight / 2) / camera.zoom;
+					obj.geometry.verticesNeedUpdate = true;
+				}
+			}
+		})
+	}
+	
+	deletePoint(index) {
+		this.dotsData.splice(index, 1)
+		for(let index in this.dotsData)
+				this.dotsProjection.push(this.projectPoint(index));
 
 	}
 	
@@ -178,30 +215,42 @@ export default class Map extends Vue{
 
 			let dots: THREE.Geometry = new THREE.Geometry();
 			
-			dotsData = JSON.parse(res.data.split('\'').join('"'));
+			// console.log(res.data);
+			
+			dotsData = res.data;
 			// dots.vertices.push(new THREE.Vector3(0, 0, -200));
 			
 			dotsData = dotsData.map(val => {
-				dots.vertices.push(new THREE.Vector3(...val.pos.map(val => val * 40), 0));
-				val.pos = [val.pos[0] * 40, val.pos[1] * 40]
+				dots.vertices.push(new THREE.Vector3(...val.pos, 0));
 				return val;
 			})
 
 			this.dotsData = dotsData;
 			
 			dotsScene.add(new THREE.Points(dots, new THREE.PointsMaterial({color: "#ff5555", size: 10})));
+			
+			
+			fileLoaded = true;
+			
+			// dotsData
+			// this.projectPoint()
 		})
 		
 		canvasEl = document.getElementById("three-canvas") as HTMLElement
 		
-		canvasEl.addEventListener('mousedown', (e) => {
-			mousePressed = true;
+		window.addEventListener('mousedown', (e) => {
+			if(e.which == 2)
+				mouseMiddlePressed = true;
+			if(e.which == 1)
+				mouseLeftPressed = true;
 		})
 
-		let mousePressed = false;
+		let mouseMiddlePressed = false;
+		let mouseLeftPressed = false;
 		
 		document.addEventListener('mouseup', (e) => {
-			mousePressed = false;
+			mouseMiddlePressed = false;
+			mouseLeftPressed = false;
 		})
 		
 		let zoomIn = false;
@@ -219,42 +268,20 @@ export default class Map extends Vue{
 		
 		
 		
-		window.addEventListener('mousemove', (e) => {
-			if(theMap && mousePressed) {
-				theMap.rotateMap(e.movementY * 0.5, e.movementX * 0.5);
-			}
-
-		})
-		
-		canvasEl.addEventListener('wheel', (e) => {
-			camera.zoom -= e.deltaY * 0.001;
-			// if(camera.zoom > 3) camera.zoom = 3;
-			// if(camera.zoom < 1) camera.zoom = 1;
-			camera.updateProjectionMatrix();
-		})
-		
-		camera = new THREE.OrthographicCamera( canvasEl.scrollWidth / -2,
-																					 canvasEl.scrollWidth / 2,
-																					 canvasEl.scrollHeight / 2,
-																					 canvasEl.scrollHeight / -2, -200, 1000);
-		
-		canvasEl.addEventListener('click', (ev: any) => {
-			console.log(ev.layerX, ev.layerY);
-			// dotsScene.vertices.push(new THREE.Vector3(...val.pos.map(val => val * 40), -200));
-			dotsScene.autoUpdate = true;
+		let putPoint = (x, y) => {
 			dotsScene.traverse((obj) => {
 				if(obj instanceof THREE.Points) {
 					if(obj.geometry instanceof THREE.Geometry) {
 						obj.geometry.vertices.push(new THREE.Vector3(
-							(ev.layerX - canvasEl.scrollWidth / 2) / camera.zoom,
-							(-ev.layerY + canvasEl.scrollHeight / 2) / camera.zoom,
+							(x - canvasEl.scrollWidth / 2) / camera.zoom,
+							(-y + canvasEl.scrollHeight / 2) / camera.zoom,
 							0));
 						
 						this.dotsData.push({
 							number: "Новая точка",
 							pos: [
-								(ev.layerX - canvasEl.scrollWidth / 2) / camera.zoom,
-								(-ev.layerY + canvasEl.scrollHeight / 2) / camera.zoom
+								(x - canvasEl.scrollWidth / 2) / camera.zoom,
+								(-y + canvasEl.scrollHeight / 2) / camera.zoom
 							]
 						});
 						
@@ -273,7 +300,60 @@ export default class Map extends Vue{
 					obj.geometry.dispose();
 				}
 			})
-			// scene.autoUpdate = true;
+		}
+		
+		window.addEventListener('mousemove', (e) => {
+			if(theMap && mouseMiddlePressed) {
+				theMap.rotateMap(e.movementY * 0.5, e.movementX * 0.5);
+			}
+
+			if(mouseLeftPressed && this.activeDropDown !== undefined) {
+				if(e.clientX < canvasEl.offsetLeft)
+					return
+				this.movePoint(e.clientX - canvasEl.offsetLeft, e.clientY, this.activeDropDown);
+				this.highlitedPoint = this.projectPoint(this.activeDropDown);
+				this.dotsProjection[this.activeDropDown] = this.highlitedPoint
+			}
+		})
+		
+		canvasEl.addEventListener('wheel', (e) => {
+			camera.zoom -= e.deltaY * 0.001;
+			// if(camera.zoom > 3) camera.zoom = 3;
+			// if(camera.zoom < 1) camera.zoom = 1;
+			camera.updateProjectionMatrix();
+		})
+		
+		camera = new THREE.OrthographicCamera( canvasEl.scrollWidth / -2,
+																					 canvasEl.scrollWidth / 2,
+																					 canvasEl.scrollHeight / 2,
+																					 canvasEl.scrollHeight / -2, -200, 1000);
+		// click handler
+		// canvasEl.addEventListener('click', (ev: any) => {
+		// 	console.log(ev.layerX, ev.layerY);
+		// 	// dotsScene.vertices.push(new THREE.Vector3(...val.pos.map(val => val * 40), -200));
+		// 	dotsScene.autoUpdate = true;
+
+		// 	putPoint(ev.layerX, ev.layerY);
+			
+		// 	// scene.autoUpdate = true;
+		// })
+		
+		window.addEventListener('click', (ev: any) => {
+			let x, y
+			x = ev.clientX
+			y = canvasEl.scrollHeight - ev.clientY;
+			if(x < canvasEl.offsetLeft)
+				return
+			console.log(ev);
+			let index = undefined;
+			this.dotsProjection.map((point, _index) => {
+				let delta = (point.x - x) ** 2 + (point.y - y) ** 2
+				if(delta < 25) {
+					index = _index
+				}
+			})
+			if(index !== undefined)
+				this.activeDropDown = index
 		})
 		
 		// dotsScene.autoUpdate = true;
@@ -285,7 +365,6 @@ export default class Map extends Vue{
 		render.setSize(canvasEl.scrollWidth, canvasEl.scrollHeight);
 		canvasEl.appendChild(render.domElement);
 		
-		let context = render.getContext();
 		
 		// window.addEventListener('resize', (ev) => {
 		// 	canvasEl = document.getElementById("three-canvas") as HTMLElement
@@ -300,10 +379,22 @@ export default class Map extends Vue{
 		// 	})
 		
 		
-		function animate() {
+		for(let index in this.dotsData)
+				this.dotsProjection.push(this.projectPoint(index));
+
+		
+		let context = render.getContext();
+
+		
+		let animate = () => {
 			
 			requestAnimationFrame(animate);
 			
+			
+			if(fileLoaded && !this.dotsProjection.length) {
+				for(let index in this.dotsData)
+          this.dotsProjection.push(this.projectPoint(index));
+			}
 			
 			initMask(render);
 			
@@ -318,8 +409,6 @@ export default class Map extends Vue{
 			
 		}
 		animate();
-		
 	}
-	
 }
 
