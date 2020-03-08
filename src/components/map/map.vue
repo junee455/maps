@@ -38,20 +38,28 @@
 				</div>
 
 			</div>
-			<div style="display: flex; position: absolute; bottom: 0">
+			<div @click="bottomMenuShown = !bottomMenuShown"
+					 id="toggle-bottom-menu"
+					 class="round-button margin-center">
+				{{  bottomMenuShown ? '▼' : '▲'}}
+			</div>
+			<div class="bottom-menu"
+					 :class="bottomMenuShown ? 'shown' : 'hidden'">
 				<div class="floor-button decorator"
 						 @click="theMap.floorHeight = (theMap.floorHeight == 15) ? 40 : 15">{{ (theMap.floorHeight == 15) ? 'expand' : 'shrink' }}</div>
-				<a class="floor-button decorator"
-					 id="download-button"
-					 @click="downloadLayout()">download layout</a>
+				<div class="floor-button decorator"
+						 
+						 @click="downloadLayout()">download layout
+					<a id="download-button"
+						 style="display: none"></a>
+				</div>
+				<div class="decorator floor-button">graph editor</div>
+				<div class="decorator floor-button">one more item</div>
 			</div>
     </div>
     
     <div id="three-canvas">
     </div>
-    <div class="show-button"
-				 v-if="!menuShown"
-				 @click="menuShown = !menuShown">show</div>
 		<div v-if="activeDropDown !== undefined"
 				 v-bind:style="{bottom: highlitedPoint.y - 10 + 'px',
 							 left: highlitedPoint.x - 10 + 'px'}"

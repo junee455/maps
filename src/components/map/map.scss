@@ -1,15 +1,24 @@
+$background-main: #002b36;
+$background-1: #586e75;
+$background-2: #93a1a1;
+$foreground: #fdf6e3;
+
 * {
-		color: #002b36;
+		color: $foreground;
+}
+
+.fit-content {
+		width: fit-content;
 }
 
 .map-component {
     display: flex;
 }
 #menu {
+		background-color: $background-main;
 		min-width: 230px;
     width: 20%;
     // padding: 10px;
-    background-color: #fdf6e3;
 		display: flex;
 		flex-direction: column;
 }
@@ -30,12 +39,13 @@
 }
 
 .decorator {
+		margin: 5px;
 		border-bottom: solid 2px #93a1a1;
 		transition: 0.1s;
 		&:hover {
-				color: #fdf6e3;
-				background-color: #586e75;
-				border-bottom: solid 2px #586e75;
+				color: $background-main;
+				background-color: $foreground;
+				border-bottom: solid 2px $foreground;
 		}
 }
 
@@ -45,15 +55,15 @@
 		input {
 				width: 50%;
 				font-family: "Courier New", Courier, monospace;
-				background-color: #fdf6e3;
+				background-color: $background-main;
 				margin: 2px;
-				margin-left: 20px;
+				margin-left: 40px;
 				padding: 3px;
 				outline: none;
 				border: none;
 				border-bottom: solid 2px #93a1a1;
 				&:focus {
-						border-bottom: solid 2px #586e75;
+						border-bottom: solid 2px $foreground;
 				}
 		}
 
@@ -85,7 +95,6 @@
     line-height: 0.7em;
     // background-color: white;
     // border-radius: 5px;
-    margin: 5px;
     width: fit-content;
     padding: 5px;
     &.active {
@@ -96,8 +105,9 @@
 }
 
 .round-button {
+		user-select: none;
 		font-size: 20px;
-		margin-right: 20px;
+		margin-left: 20px;
 		// padding-left: 10px;
 		// padding-right: 10px;
 		line-height: 30px;
@@ -130,4 +140,39 @@
 		position: absolute;
 		right: 10px;
 		top: 10px;
+}
+
+.bottom-menu {
+		padding-left: 40px;
+		background-color: inherit;
+		width: 100%;
+		bottom: 0;
+		margin-bottom: 0;
+		overflow: hidden;
+		transition: 0.1s;
+		flex-shrink: 0;
+		&.shown {
+				padding-bottom: 20px;
+				height: auto;
+		}
+		
+		&.hidden {
+				padding-bottom: inherit;
+				height: 0px;
+		}
+}
+
+.text-center {
+		text-align: center;
+}
+
+.margin-center {
+		margin-left: auto;
+		margin-right: auto;
+}
+
+#toggle-bottom-menu {
+		bottom: 0;
+		margin-top: auto;
+		margin-bottom: 10px;
 }

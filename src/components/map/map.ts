@@ -98,7 +98,8 @@ export default class Map extends Vue{
 				x: undefined,
 				y: undefined
 			},
-			dotsProjection: []
+			dotsProjection: [],
+			bottomMenuShown: false
 		}
 	}
 
@@ -107,6 +108,7 @@ export default class Map extends Vue{
 		let button = document.getElementById("download-button");
 		button.setAttribute("href", data)
 		button.setAttribute("download", "cabinets.json");
+		button.click();
 	}
 	
 	toggleDropDown(index: number) {
