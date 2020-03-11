@@ -15,6 +15,7 @@ $foreground: #fdf6e3;
     display: flex;
 }
 #menu {
+		overflow: hidden;
 		background-color: $background-main;
 		min-width: 230px;
     width: 20%;
@@ -79,14 +80,19 @@ $foreground: #fdf6e3;
 		user-select: none;
 		padding: 5px;
 		border-radius: 5px;
-		&:before {
-				color: transparent;
-				content: "▼";
-		}
 		&:hover {
 				&:before {
 						color: inherit;
 				}
+		}
+		&:before {
+				color: transparent;
+				content: "▼";
+				
+		}
+		&.active:before {
+						color: inherit;
+						content: "▲";
 		}
 }
 
@@ -172,7 +178,16 @@ $foreground: #fdf6e3;
 }
 
 #toggle-bottom-menu {
-		bottom: 0;
 		margin-top: auto;
-		margin-bottom: 10px;
+		margin-bottom: -15px;
+		transition: 0.1s;
+		&:hover {
+				margin-bottom: 10px;
+		}
+		&:after {
+				user-select: none;
+				margin-top: -10px;
+				padding: 10px;
+				content: "_";
+		}
 }

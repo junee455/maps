@@ -1,29 +1,297 @@
 import * as THREE from 'three'
 import { FloorMap, initMask, disposeMask } from './maps';
+import { MapDots, MapGraph } from './dots';
+import GraphWrapper from './graphWrapper';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import axios from 'axios';
-import {Watch, Component, Vue} from 'vue-property-decorator';
-
-function initRender() {
-	
-}
+import Vue from 'vue';
+import {Watch, Component} from 'vue-property-decorator';
 
 let theMap: FloorMap = new FloorMap()
 theMap.floorHeight = 40;
 let camera: THREE.OrthographicCamera
-let dotsData: any
 let render: THREE.WebGLRenderer
-let dotsScene: Array<THREE.Scene> = []
 let scene = new THREE.Scene();
 let canvasEl: HTMLElement
-let needUpdate = false;
-let projectionInited = false;
+let cabinetsData: Array<Array<{number: string, pos: Array<number>}>> = []
+let graphsData: Array<any> = []
+
+let cabinets: Array<MapDots>
+let graphs: Array<GraphWrapper>
 
 let fileLoaded = false;
+
+let graphRawData
 
 @Component
 export default class Map extends Vue{
 	
+	activeDropDown: number | undefined
+	menuShown: boolean = true
+	theMap = theMap
+	// focused floor index
+	focusedFloor: number | undefined
+	cabinetsData = cabinetsData
+	graphsData = graphsData
+	highlitedPoint: {
+		x: number,
+		y: number
+	}
+	bottomMenuShown: boolean = true
+	// "cabinets" | "graph"
+	currentEditor: string = "cabinets"
+	
+	data() {
+		return {
+			
+			activeDropDown: undefined,
+			menuShown: true,
+			theMap: theMap,
+			// focused floor index
+			focusedFloor: undefined,
+			cabinetsData: cabinetsData,
+			graphsData: graphsData,
+			highlitedPoint: {
+				x: undefined,
+				y: undefined
+			},
+			bottomMenuShown: true,
+			// "cabinets" | "graph"
+			currentEditor: "cabinets",
+		}
+	}
+	
+	mounted() {
+		
+		axios.get('http://localhost:8080/cabinets.json').then(res => {
+
+			cabinets = []
+			graphs = []
+			
+			res.data['cabinets'].map(floor => {
+				let floorCabinets = new MapDots()
+
+				cabinetsData.push(floor)
+				// graphsData.push(floor.graph)
+				
+				floorCabinets.setDots(floor.map(val => {
+					return {
+						x: val.pos[0],
+						y: val.pos[1],
+					}
+				}))
+				// floorGraph.setDots(floor.graph.map(val => {
+				// 	return {
+				// 		x: val.pos[0],
+				// 		y: val.pos[1],
+				// 	}
+				// }))
+				
+				floorCabinets.updateProjections(camera, canvasEl);
+				
+				cabinets.push(floorCabinets)
+			})
+			
+			res.data['graphs'].map(graph => {
+				let floorGraph = new GraphWrapper()
+				floorGraph.importGraph(graph)
+				
+				graphs.push(floorGraph);
+				
+			})
+			
+		})
+
+		canvasEl = document.getElementById("three-canvas") as HTMLElement
+		
+		window.addEventListener('keypress', (key) => {
+			if(key.key == "Delete") {
+				let activeDropDown = this.activeDropDown
+				// this.deletePoint(this.activeDropDown, this.focusedFloor);
+				// if(activeDropDown >= this.cabinetsData[this.focusedFloor].length)
+				// 	activeDropDown = this.cabinetsData[this.focusedFloor].length - 1;
+				// this.activeDropDown = activeDropDown;
+			}
+		});
+		
+		window.addEventListener('mousedown', (e) => {
+			if(e.which == 2)
+				mouseMiddlePressed = true;
+			if(e.which == 1)
+				mouseLeftPressed = true;
+		})
+
+		let mouseMiddlePressed = false;
+		let mouseLeftPressed = false;
+		
+		document.addEventListener('mouseup', (e) => {
+			mouseMiddlePressed = false;
+			mouseLeftPressed = false;
+		})
+		
+		let zoomIn = false;
+		
+		window.addEventListener('mousemove', (e) => {
+			if(theMap && mouseMiddlePressed) {
+				theMap.rotateMap(e.movementY * 0.5, e.movementX * 0.5);
+			}
+
+			if(this.currentEditor == "graph") {
+				let x = e.clientX - canvasEl.offsetLeft
+				let y = e.clientY
+				
+				x = (x - canvasEl.scrollWidth / 2) / camera.zoom
+				y = (-y + canvasEl.scrollHeight / 2) / camera.zoom
+
+				graphs[this.focusedFloor].followCursor(x, y);
+			}
+			
+			if(mouseLeftPressed && this.activeDropDown !== undefined) {
+				if(e.clientX < canvasEl.offsetLeft)
+					return
+				
+				let x = e.clientX - canvasEl.offsetLeft
+				let y = e.clientY
+				
+				x = (x - canvasEl.scrollWidth / 2) / camera.zoom
+				y = (-y + canvasEl.scrollHeight / 2) / camera.zoom
+				
+				cabinetsData[this.focusedFloor][this.activeDropDown].pos = [x, y]
+			}
+		})
+		
+		// canvasEl.addEventListener('wheel', (e) => {
+		// 	camera.zoom -= e.deltaY * 0.001;
+			
+		// 	camera.updateProjectionMatrix();
+			
+		// })
+		
+		camera = new THREE.OrthographicCamera( canvasEl.scrollWidth / -2,
+																					 canvasEl.scrollWidth / 2,
+																					 canvasEl.scrollHeight / 2,
+																					 canvasEl.scrollHeight / -2, -200, 1000);
+		
+		window.addEventListener('click', (ev: any) => {
+			let x, y
+
+			if(x < canvasEl.offsetLeft) {
+				return
+			}
+			
+			let index = undefined;
+			if(this.focusedFloor === undefined)
+				return
+			
+			if(this.currentEditor == "cabinets") {
+				x = ev.clientX
+				y = canvasEl.scrollHeight - ev.clientY;
+				cabinets[this.focusedFloor].projections.map((point, _index) => {
+					let delta = (point.x - x) ** 2 + (point.y - y) ** 2
+					if(delta < 25) {
+						index = _index
+					}
+				})
+				if(index !== undefined)
+					this.activeDropDown = index
+			} else {
+				if(ev.clientX < canvasEl.offsetLeft)
+					return
+				
+				x = ev.clientX - canvasEl.offsetLeft
+				y = ev.clientY
+				
+				// compute real coordinates
+				x = (x - canvasEl.scrollWidth / 2) / camera.zoom
+				y = (-y + canvasEl.scrollHeight / 2) / camera.zoom
+				
+				graphs[this.focusedFloor].click(x, y);
+				// graphs[this.focusedFloor].putRandomPoint();
+				
+				// graphsData[this.focusedFloor].push({x: (x - canvasEl.scrollWidth / 2) / camera.zoom,
+				// 								 y: (-y + canvasEl.scrollHeight / 2) / camera.zoom});
+				
+				// graphs[this.focusedFloor].setDots(graphsData[this.focusedFloor]);
+				
+				
+
+				
+				// graphs[this.focusedFloor].putPoint({x: (x - canvasEl.scrollWidth / 2) / camera.zoom,
+				// 																		y: (-y + canvasEl.scrollHeight / 2) / camera.zoom});
+				
+			}
+			
+
+		})
+		
+		// dotsScene.autoUpdate = true;
+		
+		camera.position.z = -50;
+		camera.zoom = 5;
+		camera.updateProjectionMatrix();
+		
+		render.setSize(canvasEl.scrollWidth, canvasEl.scrollHeight);
+		canvasEl.appendChild(render.domElement);
+		
+		
+		// window.addEventListener('resize', (ev) => {
+		// 	canvasEl = document.getElementById("three-canvas") as HTMLElement
+		
+		// 	camera = new THREE.OrthographicCamera( canvasEl.scrollWidth / -2,
+		// 		canvasEl.scrollWidth / 2,
+		// 		canvasEl.scrollHeight / 2,
+		// 		canvasEl.scrollHeight / -2, -200, 1000);
+		// 		camera.position.z = -50;
+		// 		camera.zoom = 5;
+		// 		camera.updateProjectionMatrix();
+		// 	})
+		
+		
+		// for(let index in this.dotsData)
+		// 		this.dotsProjection.push(this.projectPoint(index));
+
+		
+		let context = render.getContext();
+
+		
+		let animate = () => {
+			
+			requestAnimationFrame(animate);
+			
+			
+			// if(fileLoaded && !projectionInited) {
+			// 	cabinetsData.map((floorDots, floor) => {
+			// 		this.dotsProjection.push([]);
+			// 		for(let index in floorDots)
+			// 			this.dotsProjection[floor].push(this.projectPoint(index, floor));	
+			// 	})
+			// 	projectionInited = true;
+			// }
+			
+			initMask(render);
+			
+			// firstFloor.renderMapMask(render, scene, camera);
+			theMap.renderMap(render, scene, camera);
+			disposeMask(render);
+			context.clear(context.DEPTH_BUFFER_BIT || context.STENCIL_BUFFER_BIT);
+			if(this.focusedFloor !== undefined) {
+				// if(dotsScene[this.focusedFloor]) {
+				render.render(cabinets[this.focusedFloor].dotsScene, camera);
+				graphs[this.focusedFloor].lines.map(val => {
+					render.render(val.dotsScene, camera);
+				})
+					// render.render(graphs[this.focusedFloor].dotsScene, camera);
+				// }
+			}
+			
+			// if(this.currentEditor == "graph") {
+			// 	render.render(this.graphsObj.dotsScene, camera)
+			// }
+			
+			
+		}
+		animate();
+	}
 	
 	constructor() {
 		super();
@@ -85,26 +353,16 @@ export default class Map extends Vue{
 		
 		
 	}
-
-	data() {
-		return {
-			activeDropDown: undefined,
-			menuShown: true,
-			theMap: theMap,
-			// focused floor index
-			focusedFloor: undefined,
-			dotsData: dotsData,
-			highlitedPoint: {
-				x: undefined,
-				y: undefined
-			},
-			dotsProjection: [],
-			bottomMenuShown: false
-		}
-	}
+	
+	// graph wrapper
+	
+	
+	
+	//* graph wrapper
 
 	downloadLayout() {
-		let data = "data:text/json;charset=utf-8," + JSON.stringify(this.dotsData);
+		let data = "data:text/json;charset=utf-8," + JSON.stringify({cabinets: this.cabinetsData,
+																																 graphs: graphs.map(graph => graph.exportGraph())});
 		let button = document.getElementById("download-button");
 		button.setAttribute("href", data)
 		button.setAttribute("download", "cabinets.json");
@@ -119,7 +377,7 @@ export default class Map extends Vue{
 		}
 	}
 	
-	focusFloor (index) {
+	focusFloor(index) {
 		if(index === this.focusedFloor) {
 			this.theMap.disableFocus()
 			this.activeDropDown = undefined;
@@ -131,331 +389,77 @@ export default class Map extends Vue{
 		this.focusedFloor = index
 	}
 
-	@Watch('dotsData', {deep: true})
-	onDataChanged(newData, oldData) {
-		if(this.focusedFloor === undefined)
-			return;
-		dotsScene[this.focusedFloor].traverse(val => {
-			if(val instanceof THREE.Points && val.geometry instanceof THREE.Geometry) {
-				
-				val.geometry.vertices = newData[this.focusedFloor].map(point => {
-					return new THREE.Vector3(parseFloat(point.pos[0]), parseFloat(point.pos[1]), 0);
-				})
-				
-				val.geometry.setFromPoints(val.geometry.vertices);
-				
-				val.geometry.verticesNeedUpdate = true;
-			}
-		})
+	@Watch('cabinetsData', {deep: true})
+	onDataChanged(newData) {
 		
-		if(this.activeDropDown !== undefined) {
-			this.highlitedPoint = this.projectPoint(this.activeDropDown, this.focusedFloor);
-			// this.dotsProjection[this.activeDropDown] = this.highlitedPoint;
-		}
-	}
-	
-	projectPoint(index, floor) {
-		let vec3: any;
-		dotsScene[floor].traverse(val => {
-			if(val instanceof THREE.Points && val.geometry instanceof THREE.Geometry) {
-				camera.updateMatrixWorld();
-				
-				vec3 = val.geometry.vertices[index].clone().project(camera);
-				
-				
-				vec3.x = (vec3.x + 1) / 2 * canvasEl.scrollWidth + canvasEl.offsetLeft;
-				vec3.y = (vec3.y + 1) / 2 * canvasEl.scrollHeight;
-				
-				
-			}
-		})
-		return {x: vec3.x,
-						y: vec3.y}
+		if(this.focusedFloor === undefined)
+			return
+		
+		newData.map((floor, index) => {
+			cabinets[index].setDots(floor.map(point => {
+				return {
+					x: point.pos[0],
+					y: point.pos[1]
+				}
+			}))
+			cabinets[index].updateProjections(camera, canvasEl);
+			this.highlitedPoint = cabinets[this.focusedFloor].projections[this.activeDropDown]
+		});
 	}
 	
 	@Watch('activeDropDown')
 	onActiveDropDownChange(newData, oldData) {
-		console.log("data change", newData);
 		if(newData !== undefined) {
-			this.highlitedPoint = this.projectPoint(newData, this.focusedFloor);
-			this.dotsProjection[this.focusedFloor][newData] = this.highlitedPoint;
+			this.highlitedPoint = cabinets[this.focusedFloor].projections[this.activeDropDown]
 		}
-	}
-	
-	beforeUpdate() {
-
-	}
-	
-	movePoint(x, y, index, floor) {
-		dotsScene[floor].traverse((obj) => {
-			if(obj instanceof THREE.Points) {
-				if(obj.geometry instanceof THREE.Geometry) {
-					obj.geometry.vertices[index] = new THREE.Vector3(
-						(x - canvasEl.scrollWidth / 2) / camera.zoom,
-						(-y + canvasEl.scrollHeight / 2) / camera.zoom,
-						0);
-					
-					this.dotsData[floor][index].pos[0] = (x - canvasEl.scrollWidth / 2) / camera.zoom;
-					this.dotsData[floor][index].pos[1] = (-y + canvasEl.scrollHeight / 2) / camera.zoom;
-					obj.geometry.verticesNeedUpdate = true;
-				}
-			}
-		})
-	}
-	
-	deletePoint(index, floor) {
-		this.dotsData[floor].splice(index, 1)
-		this.dotsProjection[floor] = []
-
-		
-		dotsScene[floor].traverse((obj) => {
-			if(obj instanceof THREE.Points) {
-				if(obj.geometry instanceof THREE.Geometry) {
-					
-					obj.geometry.vertices.splice(index, 1)
-					obj.geometry.setFromPoints(obj.geometry.vertices);
-					
-					obj.geometry.verticesNeedUpdate = true;
-					obj.geometry.elementsNeedUpdate = true;
-					
-					dotsScene[floor].add(new THREE.Points(obj.geometry.clone(), new THREE.PointsMaterial({color: "#487586", size: 10})));
-					
-					dotsScene[floor].remove(obj);
-					
-					obj.geometry.dispose();
-					
-				}
-				obj.geometry.dispose();
-			}
-		})
-		
-		for(let index in this.dotsData[floor])
-			this.dotsProjection[floor].push(this.projectPoint(index, floor));
-		
-		this.activeDropDown = undefined;
 	}
 	
 	putPoint(floor, x = canvasEl.scrollWidth / 2, y = canvasEl.scrollHeight / 2) {
-		console.log(dotsScene);
 
-		dotsScene[floor].traverse((obj) => {
-			if(obj instanceof THREE.Points) {
-				if(obj.geometry instanceof THREE.Geometry) {
-					obj.geometry.vertices.push(new THREE.Vector3(
-						(x - canvasEl.scrollWidth / 2) / camera.zoom,
-						(-y + canvasEl.scrollHeight / 2) / camera.zoom,
-						0));
-					
-					this.dotsData[floor].push({
-						number: "Новая точка",
-						pos: [
-							(x - canvasEl.scrollWidth / 2) / camera.zoom,
-							(-y + canvasEl.scrollHeight / 2) / camera.zoom
-						]
-					});
-					
-					obj.geometry.setFromPoints(obj.geometry.vertices);
-					
-					obj.geometry.verticesNeedUpdate = true;
-					obj.geometry.elementsNeedUpdate = true;
-					
-					dotsScene[floor].add(new THREE.Points(obj.geometry.clone(), new THREE.PointsMaterial({color: "#487586", size: 10})));
-					
-					dotsScene[floor].remove(obj);
-					
-					obj.geometry.dispose();
-					
-				}
-				obj.geometry.dispose();
-			}
-		})
-		for(let index in this.dotsData[floor])
-			this.dotsProjection[floor][index] = this.projectPoint(index, floor);
-		this.activeDropDown = this.dotsData[floor].length - 1;
+		x = (x - canvasEl.scrollWidth / 2) / camera.zoom
+		y = (-y + canvasEl.scrollHeight / 2) / camera.zoom
+
+		
+		if(this.currentEditor == "graph") {
+			// graphsData.push({
+			// 	x: Math.random() * 20 - 10,
+			// 	y: Math.random() * 20 - 10
+			// });
+
+			// graphs[this.focusedFloor].setDots(graphsData);
+			
+
+			
+			// graphs[this.focusedFloor].putPoint({
+			// 	x: 0,
+			// 	y: 0
+			// });
+			
+			return
+		}
+		
+		cabinetsData[this.focusedFloor].push({number: "Новая точка", pos: [x, y]});
+		this.activeDropDown = cabinetsData[this.focusedFloor].length - 1
 	}
 	
-	mounted() {
-
-
-		axios.get('http://localhost:8080/cabinets.json').then(res => {
-
-			let dots: Array<THREE.Geometry> = [];
-			
-			// console.log(res.data);
-			
-			dotsData = res.data;
-			// dots.vertices.push(new THREE.Vector3(0, 0, -200));
-			
-			this.dotsData = dotsData;
-
-			dotsData.map((floorDots, index) => {
-				dots.push(new THREE.Geometry());
-				floorDots.map((val) => {
-					dots[index].vertices.push(new THREE.Vector3(...val.pos, 0));
-				})
-				dotsScene.push(new THREE.Scene());
-				dotsScene[index].add(new THREE.Points(dots[index], new THREE.PointsMaterial({color: "#487586", size: 10})));
+	switchEditor() {
+		// "cabinets" | "graph"
+		if(this.currentEditor == "cabinets") {
+			this.currentEditor = "graph"
+			cabinets.map(floor => {
+				floor.setMaterial({color: "#487586", size: 5});
 			})
-			
-			fileLoaded = true;
-			
-			// dotsData
-			// this.projectPoint()
-		})
-		
-		canvasEl = document.getElementById("three-canvas") as HTMLElement
-		
-		window.addEventListener('mousedown', (e) => {
-			if(e.which == 2)
-				mouseMiddlePressed = true;
-			if(e.which == 1)
-				mouseLeftPressed = true;
-		})
-
-		let mouseMiddlePressed = false;
-		let mouseLeftPressed = false;
-		
-		document.addEventListener('mouseup', (e) => {
-			mouseMiddlePressed = false;
-			mouseLeftPressed = false;
-		})
-		
-		let zoomIn = false;
-		
-		// document.addEventListener('dblclick', (e) => {
-		// 	zoomIn = !zoomIn;
-		// 	if(zoomIn) {
-		// 		camera.zoom = 2;
-		// 		camera.updateProjectionMatrix();
-		// 	} else {
-		// 		camera.zoom = 1;
-		// 		camera.updateProjectionMatrix();
-		// 	}
-		// })
-		
-		
-		
-
-		
-		window.addEventListener('mousemove', (e) => {
-			if(theMap && mouseMiddlePressed) {
-				theMap.rotateMap(e.movementY * 0.5, e.movementX * 0.5);
-			}
-
-			if(mouseLeftPressed && this.activeDropDown !== undefined) {
-				if(e.clientX < canvasEl.offsetLeft)
-					return
-				this.movePoint(e.clientX - canvasEl.offsetLeft, e.clientY, this.activeDropDown, this.focusedFloor);
-				this.highlitedPoint = this.projectPoint(this.activeDropDown, this.focusedFloor);
-				this.dotsProjection[this.focusedFloor][this.activeDropDown] = this.highlitedPoint
-			}
-		})
-		
-		canvasEl.addEventListener('wheel', (e) => {
-			camera.zoom -= e.deltaY * 0.001;
-			// if(camera.zoom > 3) camera.zoom = 3;
-			// if(camera.zoom < 1) camera.zoom = 1;
-			camera.updateProjectionMatrix();
-			this.dotsData.map((floorDots, floor) => {
-			for(let index in floorDots)
-				this.dotsProjection[floor][index] = this.projectPoint(index, floor);
+			// this.currentDots = this.graphs
+		} else {
+			this.currentEditor = "cabinets"
+			cabinets.map(floor => {
+				floor.setMaterial({color: "#487586", size: 10});
 			})
-			if(this.focusedFloor !== undefined)
-				this.highlitedPoint = this.dotsProjection[this.focusedFloor][this.activeDropDown];
-		})
-		
-		camera = new THREE.OrthographicCamera( canvasEl.scrollWidth / -2,
-																					 canvasEl.scrollWidth / 2,
-																					 canvasEl.scrollHeight / 2,
-																					 canvasEl.scrollHeight / -2, -200, 1000);
-		// click handler
-		// canvasEl.addEventListener('click', (ev: any) => {
-		// 	console.log(ev.layerX, ev.layerY);
-		// 	// dotsScene.vertices.push(new THREE.Vector3(...val.pos.map(val => val * 40), -200));
-		// 	dotsScene.autoUpdate = true;
-
-		// 	putPoint(ev.layerX, ev.layerY);
-			
-		// 	// scene.autoUpdate = true;
-		// })
-		
-		window.addEventListener('click', (ev: any) => {
-			let x, y
-			x = ev.clientX
-			y = canvasEl.scrollHeight - ev.clientY;
-			if(x < canvasEl.offsetLeft)
-				return
-			console.log(ev);
-			let index = undefined;
-			this.dotsProjection[this.focusedFloor].map((point, _index) => {
-				let delta = (point.x - x) ** 2 + (point.y - y) ** 2
-				if(delta < 25) {
-					index = _index
-				}
-			})
-			if(index !== undefined)
-				this.activeDropDown = index
-		})
-		
-		// dotsScene.autoUpdate = true;
-		
-		camera.position.z = -50;
-		camera.zoom = 5;
-		camera.updateProjectionMatrix();
-		
-		render.setSize(canvasEl.scrollWidth, canvasEl.scrollHeight);
-		canvasEl.appendChild(render.domElement);
-		
-		
-		// window.addEventListener('resize', (ev) => {
-		// 	canvasEl = document.getElementById("three-canvas") as HTMLElement
-		
-		// 	camera = new THREE.OrthographicCamera( canvasEl.scrollWidth / -2,
-		// 		canvasEl.scrollWidth / 2,
-		// 		canvasEl.scrollHeight / 2,
-		// 		canvasEl.scrollHeight / -2, -200, 1000);
-		// 		camera.position.z = -50;
-		// 		camera.zoom = 5;
-		// 		camera.updateProjectionMatrix();
-		// 	})
-		
-		
-		// for(let index in this.dotsData)
-		// 		this.dotsProjection.push(this.projectPoint(index));
-
-		
-		let context = render.getContext();
-
-		
-		let animate = () => {
-			
-			requestAnimationFrame(animate);
-			
-			
-			if(fileLoaded && !projectionInited) {
-				dotsData.map((floorDots, floor) => {
-					this.dotsProjection.push([]);
-					for(let index in floorDots)
-						this.dotsProjection[floor].push(this.projectPoint(index, floor));	
-				})
-				projectionInited = true;
-			}
-			
-			initMask(render);
-			
-			// firstFloor.renderMapMask(render, scene, camera);
-			theMap.renderMap(render, scene, camera);
-			disposeMask(render);
-			context.clear(context.DEPTH_BUFFER_BIT || context.STENCIL_BUFFER_BIT);
-			if(this.focusedFloor !== undefined) {
-				if(dotsScene[this.focusedFloor]) {
-					render.render(dotsScene[this.focusedFloor], camera);
-				}
-			}
-			
-			
+			// this.currentDots = this.cabinetsData
 		}
-		animate();
+		
 	}
+	
+
 }
 
