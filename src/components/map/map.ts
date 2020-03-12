@@ -23,23 +23,36 @@ let fileLoaded = false;
 
 let graphRawData
 
-@Component
-export default class Map extends Vue{
+export default Vue.extend({
 	
-	activeDropDown: number | undefined
-	menuShown: boolean = true
-	theMap = theMap
-	// focused floor index
-	focusedFloor: number | undefined
-	cabinetsData = cabinetsData
-	graphsData = graphsData
-	highlitedPoint: {
-		x: number,
-		y: number
-	}
-	bottomMenuShown: boolean = true
-	// "cabinets" | "graph"
-	currentEditor: string = "cabinets"
+	watch: {
+		cabinetsData: {
+			deep: true,
+			handler(newData) {
+				
+				if(this.focusedFloor === undefined)
+					return
+				
+				newData.map((floor: Array<any>, index: number) => {
+					cabinets[index].setDots(floor.map(point => {
+						return {
+							x: point.pos[0],
+							y: point.pos[1]
+						}
+					}))
+					cabinets[index].updateProjections(camera, canvasEl);
+					this.highlitedPoint = cabinets[this.focusedFloor as number].projections[this.activeDropDown as number]
+				});
+			}
+		},
+
+		
+		activeDropDown(newData, oldData) {
+			if(newData !== undefined) {
+				this.highlitedPoint = cabinets[this.focusedFloor].projections[this.activeDropDown]
+			}
+		}
+	},
 	
 	data() {
 		return {
@@ -65,7 +78,7 @@ export default class Map extends Vue{
 			toCabinet: undefined,
 			fromCabinet: undefined
 		}
-	}
+	},
 	
 	mounted() {
 		
@@ -168,9 +181,9 @@ export default class Map extends Vue{
 		
 		// canvasEl.addEventListener('wheel', (e) => {
 		// 	camera.zoom -= e.deltaY * 0.001;
-			
+		
 		// 	camera.updateProjectionMatrix();
-			
+		
 		// })
 		
 		camera = new THREE.OrthographicCamera( canvasEl.scrollWidth / -2,
@@ -299,7 +312,7 @@ export default class Map extends Vue{
 				// 	render.render(val.dotsScene, camera);
 				// })
 
-					// render.render(graphs[this.focusedFloor].dotsScene, camera);
+				// render.render(graphs[this.focusedFloor].dotsScene, camera);
 				// }
 			}
 			
@@ -311,7 +324,7 @@ export default class Map extends Vue{
 				if(this.focusedFloor === undefined)
 					this.wayPath.dotsScene.position.y = -10
 				// this.wayPath.dotsScene.rotation.z = theMap.wholeGroup.rotation.z
-					render.render(this.wayPath.dotsScene, camera);
+				render.render(this.wayPath.dotsScene, camera);
 			}
 			
 			// if(this.currentEditor == "graph") {
@@ -321,36 +334,9 @@ export default class Map extends Vue{
 			
 		}
 		animate();
-	}
+	},
 	
-	
-	findWayButton() {
-		if(this.toCabinet !== undefined && this.fromCabinet !== undefined) {
-			this.fromPoint = this.toPoint = undefined
-
-			
-			
-			this.findWay(...cabinetsData[1].find(val => val.number == this.fromCabinet).pos)
-			this.findWay(...cabinetsData[1].find(val => val.number == this.toCabinet).pos)
-		}
-	}
-	
-	findWay(x, y) {
-		let index = this.focusedFloor
-		if(this.focusedFloor == undefined)
-			index = 1
-		
-		if(!this.fromPoint) {
-			this.fromPoint = {x: x, y: y}
-		} else if(!this.toPoint) {
-			this.toPoint = {x: x, y: y}
-			this.wayPath = graphs[index].findPath(this.fromPoint, this.toPoint);
-			this.fromPoint = this.toPoint = undefined
-		}
-	}
-	
-	constructor() {
-		super();
+	beforeMount() {
 		
 		// load all the data and set up the render before compenent mount
 		let transparentMaterial = new THREE.MeshPhongMaterial({color: "#f0f0f0"});
@@ -404,113 +390,116 @@ export default class Map extends Vue{
 		
 		
 		var light = new THREE.PointLight( 0xffffff, 1 );
-		light.position.set( 0, 200, 1000 );
+		light.position.set( 400, 200, 600 );
 		scene.add( light );
 		
 		
-	}
+	},
 	
+	methods: {
+		findWayButton() {
+			if(this.toCabinet !== undefined && this.fromCabinet !== undefined) {
+				this.fromPoint = this.toPoint = undefined
 
-	downloadLayout() {
-		let data = "data:text/json;charset=utf-8," + JSON.stringify({cabinets: this.cabinetsData,
-																																 graphs: graphs.map(graph => graph.exportGraph())});
-		let button = document.getElementById("download-button");
-		button.setAttribute("href", data)
-		button.setAttribute("download", "cabinets.json");
-		button.click();
-	}
-	
-	toggleDropDown(index: number) {
-		if(index === this.activeDropDown) {
+				
+				
+				this.findWay(...cabinetsData[1].find(val => val.number == this.fromCabinet).pos)
+				this.findWay(...cabinetsData[1].find(val => val.number == this.toCabinet).pos)
+			}
+		},
+		
+		findWay(x, y) {
+			let index = this.focusedFloor
+			if(this.focusedFloor == undefined)
+				index = 1
+			
+			if(!this.fromPoint) {
+				this.fromPoint = {x: x, y: y}
+			} else if(!this.toPoint) {
+				this.toPoint = {x: x, y: y}
+				this.wayPath = graphs[index].findPath(this.fromPoint, this.toPoint);
+				this.fromPoint = this.toPoint = undefined
+			}
+		},
+		
+
+		downloadLayout() {
+			let data = "data:text/json;charset=utf-8," + JSON.stringify({cabinets: this.cabinetsData,
+																																	 graphs: graphs.map(graph => graph.exportGraph())});
+			let button = document.getElementById("download-button");
+			button.setAttribute("href", data)
+			button.setAttribute("download", "cabinets.json");
+			button.click();
+		},
+		
+		toggleDropDown(index: number) {
+			if(index === this.activeDropDown) {
+				this.activeDropDown = undefined;
+			} else {
+				this.activeDropDown = index;
+			}
+		},
+		
+		focusFloor(index) {
+			if(index === this.focusedFloor) {
+				this.theMap.disableFocus()
+				this.activeDropDown = undefined;
+				this.focusedFloor = undefined
+				return
+			}
 			this.activeDropDown = undefined;
-		} else {
-			this.activeDropDown = index;
-		}
-	}
-	
-	focusFloor(index) {
-		if(index === this.focusedFloor) {
-			this.theMap.disableFocus()
-			this.activeDropDown = undefined;
-			this.focusedFloor = undefined
-			return
-		}
-		this.activeDropDown = undefined;
-		this.theMap.focusFloor(index);
-		this.focusedFloor = index
-	}
+			this.theMap.focusFloor(index);
+			this.focusedFloor = index
+		},
 
-	@Watch('cabinetsData', {deep: true})
-	onDataChanged(newData) {
-		
-		if(this.focusedFloor === undefined)
-			return
-		
-		newData.map((floor, index) => {
-			cabinets[index].setDots(floor.map(point => {
-				return {
-					x: point.pos[0],
-					y: point.pos[1]
-				}
-			}))
-			cabinets[index].updateProjections(camera, canvasEl);
-			this.highlitedPoint = cabinets[this.focusedFloor].projections[this.activeDropDown]
-		});
-	}
-	
-	@Watch('activeDropDown')
-	onActiveDropDownChange(newData, oldData) {
-		if(newData !== undefined) {
-			this.highlitedPoint = cabinets[this.focusedFloor].projections[this.activeDropDown]
-		}
-	}
-	
-	putPoint(floor, x = canvasEl.scrollWidth / 2, y = canvasEl.scrollHeight / 2) {
-
-		x = (x - canvasEl.scrollWidth / 2) / camera.zoom
-		y = (-y + canvasEl.scrollHeight / 2) / camera.zoom
 
 		
-		if(this.currentEditor == "graph") {
-			// graphsData.push({
-			// 	x: Math.random() * 20 - 10,
-			// 	y: Math.random() * 20 - 10
-			// });
+		putPoint(floor, x = canvasEl.scrollWidth / 2, y = canvasEl.scrollHeight / 2) {
 
-			// graphs[this.focusedFloor].setDots(graphsData);
-			
+			x = (x - canvasEl.scrollWidth / 2) / camera.zoom
+			y = (-y + canvasEl.scrollHeight / 2) / camera.zoom
 
 			
-			// graphs[this.focusedFloor].putPoint({
-			// 	x: 0,
-			// 	y: 0
-			// });
-			
-			return
-		}
-		
-		cabinetsData[this.focusedFloor].push({number: "Новая точка", pos: [x, y]});
-		this.activeDropDown = cabinetsData[this.focusedFloor].length - 1
-	}
-	
-	switchEditor() {
-		// "cabinets" | "graph"
-		if(this.currentEditor == "cabinets") {
-			this.currentEditor = "graph"
-			cabinets.map(floor => {
-				floor.setMaterial({color: "#487586", size: 5});
-			})
-			// this.currentDots = this.graphs
-		} else {
-			this.currentEditor = "cabinets"
-			cabinets.map(floor => {
-				floor.setMaterial({color: "#487586", size: 10});
-			})
-			// this.currentDots = this.cabinetsData
-		}
-		
-	}
-	
+			if(this.currentEditor == "graph") {
+				// graphsData.push({
+				// 	x: Math.random() * 20 - 10,
+				// 	y: Math.random() * 20 - 10
+				// });
 
-}
+				// graphs[this.focusedFloor].setDots(graphsData);
+				
+
+				
+				// graphs[this.focusedFloor].putPoint({
+				// 	x: 0,
+				// 	y: 0
+				// });
+				
+				return
+			}
+			
+			cabinetsData[this.focusedFloor].push({number: "Новая точка", pos: [x, y]});
+			this.activeDropDown = cabinetsData[this.focusedFloor as number].length - 1
+		},
+		
+		switchEditor() {
+			// "cabinets" | "graph"
+			if(this.currentEditor == "cabinets") {
+				this.currentEditor = "graph"
+				cabinets.map(floor => {
+					floor.setMaterial({color: "#487586", size: 5});
+				})
+				// this.currentDots = this.graphs
+			} else {
+				this.currentEditor = "cabinets"
+				cabinets.map(floor => {
+					floor.setMaterial({color: "#487586", size: 10});
+				})
+				// this.currentDots = this.cabinetsData
+			}
+			
+		}
+	}	
+
+})
 

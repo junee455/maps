@@ -230,14 +230,14 @@ export default class GraphWrapper {
 						if(delta < this.snapRadius) {
 							console.log("duplicate");
 							duplicate = true
-							vertexI = _vertex
+							vertexI = +_vertex
 							break
 						}
 					}
 					if(!duplicate)
 						vertexI = exportedPoints.push([vertex.x, vertex.y]) - 1
 					// establish connections
-					exportedLines[lineI].push(parseInt(vertexI))
+					exportedLines[lineI].push(vertexI)
 				})
 		})
 		return {
