@@ -61,7 +61,9 @@ export default class Map extends Vue{
 			fromPoint: undefined,
 			toPoint: undefined,
 			findWayEngaged: true,
-			wayPath: undefined
+			wayPath: undefined,
+			toCabinet: undefined,
+			fromCabinet: undefined
 		}
 	}
 	
@@ -321,15 +323,26 @@ export default class Map extends Vue{
 	}
 	
 	
+	findWayButton() {
+		if(this.toCabinet !== undefined && this.fromCabinet !== undefined) {
+			this.fromPoint = this.toPoint = undefined
+
+			
+			
+			this.findWay(...cabinetsData[1].find(val => val.number == this.fromCabinet).pos)
+			this.findWay(...cabinetsData[1].find(val => val.number == this.toCabinet).pos)
+		}
+	}
+	
 	findWay(x, y) {
-		if(this.focusedFloor == undefined)
-			return
+		// if(this.focusedFloor == undefined)
+			// return
 		
 		if(!this.fromPoint) {
 			this.fromPoint = {x: x, y: y}
 		} else if(!this.toPoint) {
 			this.toPoint = {x: x, y: y}
-			this.wayPath = graphs[this.focusedFloor].findPath(this.fromPoint, this.toPoint);
+			this.wayPath = graphs[1].findPath(this.fromPoint, this.toPoint);
 			this.fromPoint = this.toPoint = undefined
 		}
 	}

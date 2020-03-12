@@ -59,13 +59,20 @@
 						 @click="findWayEngaged = !findWayEngaged">find way</div>
 			</div>
     </div>
-    
     <div id="three-canvas">
     </div>
 		<div v-if="activeDropDown !== undefined"
 				 v-bind:style="{bottom: highlitedPoint.y - 10 + 'px',
 							 left: highlitedPoint.x - 10 + 'px'}"
 				 class="point-highlight"></div>
+		<div class="search-bar">
+			<input style="color: black"
+						 v-model="fromCabinet"/>
+			<input style="color: black"
+						 v-model="toCabinet"/>
+			<div style="background-color: grey"
+			@click="findWayButton()">GO</div>
+		</div>
   </div>
 </template>
 
