@@ -55,6 +55,8 @@
 				</div>
 				<div class="decorator floor-button"
 						 @click="switchEditor()">{{ currentEditor == "graph" ? "cabinets" : "graph" }} editor</div>
+				<div class="decorator floor-button"
+						 @click="findWayEngaged = !findWayEngaged">find way</div>
 			</div>
     </div>
     

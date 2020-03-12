@@ -14,11 +14,6 @@ export class Dots {
 		this.dots = []
 		this.dotsScene = new THREE.Scene();
 		this.geometry = new THREE.Geometry();
-		
-		// default material
-		// this.material = new THREE.PointsMaterial({color: "#487586", size: 10});
-		// this.pointsInstance = new THREE.Points(this.geometry, this.material);
-		// this.dotsScene.add(this.pointsInstance);
 	}
 	
 	

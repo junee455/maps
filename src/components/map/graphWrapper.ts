@@ -26,7 +26,8 @@ export default class GraphWrapper {
 		// find point indexes
 		let fromI, toI
 
-		for(let index in this.graphData.points) {
+		for(let _index in this.graphData.points) {
+			let index = parseInt(_index);
 			if(fromI === undefined) {
 				let delta = (this.graphData.points[index][0] - from.x) ** 2 + (this.graphData.points[index][1] - from.y) ** 2
 				if(delta < this.snapRadius) {
@@ -34,7 +35,7 @@ export default class GraphWrapper {
 				}
 			}
 			if(toI === undefined) {
-				delta = (this.graphData.points[index][0] - to.x) ** 2 + (this.graphData.points[index][1] - to.y) ** 2
+				let delta = (this.graphData.points[index][0] - to.x) ** 2 + (this.graphData.points[index][1] - to.y) ** 2
 				if(delta < this.snapRadius) {
 					toI = index
 				}
@@ -46,18 +47,154 @@ export default class GraphWrapper {
 		// find the way
 		// find lines points belong to
 		let fromL, toL
-		for(let line in this.graphData.lines) {
-			for(let point in this.graphData.lines[line]) {
+		for(let _line in this.graphData.lines) {
+			let line = parseInt(_line)
+			for(let _point in this.graphData.lines[line]) {
+				let point = parseInt(_point)
 				if(this.graphData.lines[line][point] == fromI)
 					fromL = line;
 				if(this.graphData.lines[line][point] == toI)
-					toI = line
+					toL = line
 				if(fromL !== undefined && toL !== undefined)
 					break
 			}
 		}
+		// wave search algorithm but for sets of points
+		let path: Array<{
+			level: number,
+			points: Array<number>
+		}> = [{level: 0, points: [fromL]}]
+		// indexes of lines not included in path
+		let checked = [fromL]
+		let pathFound = false
 		
+		let areNeighbours = (a: number, b: number) => {
+			let neighbours = false
+			this.graphData.lines[a].map((val) => {
+				if(this.graphData.lines[b] && this.graphData.lines[b].includes(val))
+					neighbours = true
+			})
+			return neighbours
+		}
+		
+		let intersection = (a: Array<any>, b: Array<any>) => {
+			let common = []
+			a.map(val => {
+				if(b.includes(val))
+					common.push(val)
+			})
+			return common
+		}
+		
+		console.log(fromL, toL);
+		
+		let buildPath = () => {
+			if(pathFound)
+				return
+			let level = path.length
+			let points = path[level - 1].points
+			let newPoints = []
+			points.map(val => {
+				this.graphData.lines.map((_val, index) =>{
+					if(pathFound)
+						return
+					if(!checked.includes(index)) {
+						if(areNeighbours(index, val)) {
+							checked.push(index)
+							if(index != toL) {
+								newPoints.push(index)
+							} else {
+								console.log("found")
+								newPoints = [index]
+								pathFound = true
+							}
+						}
+					}
+				})
+			})
 
+			path.push({
+				level: level,
+				points: newPoints
+			})
+		}
+		
+		while(!pathFound) {
+			buildPath();
+			if(path[path.length - 1].points.length == 0)
+				break
+		}
+		
+		console.log(path);
+
+		// invert path
+		path.reverse()
+
+		let finalPath = [toL]
+		
+		// trace the way back 
+		path.slice(1).map((val, index) => {
+			let done = false
+			val.points.map(pt => {
+				if(!done && areNeighbours(pt, finalPath[finalPath.length - 1])) {
+					done = true
+					finalPath.push(pt)
+				}
+			})
+		})
+		
+		finalPath.reverse()
+		
+		let intersections = [fromI]
+		let finalPathPoints = []
+		
+		// this.graphData.lines(finalPath[0])
+		
+		//find intersection points
+		finalPath.slice(1).map((val, index) => {
+			intersections.push(intersection(this.graphData.lines[finalPath[index]],
+																			this.graphData.lines[val])[0])
+		})
+		
+		intersections.push(toI)
+		
+		console.log("final path", finalPath);
+		console.log("intersections", intersections);
+		
+		let getPointsRange = (start: number, end: number, line: number) => {
+			start = this.graphData.lines[line].indexOf(start)
+			end = this.graphData.lines[line].indexOf(end)
+			let reverse = false
+			if(end < start) {
+				[end, start] = [start, end]
+				reverse = true
+			}
+			return reverse ? this.graphData.lines[line].slice(start, end).reverse() : this.graphData.lines[line].slice(start, end);
+		}
+		
+		intersections.map((val, index) => {
+			if(intersections[index + 1] !== undefined)
+				getPointsRange(val, intersections[index + 1], finalPath[index]).map(_val => finalPathPoints.push(_val));
+		})
+		
+		finalPathPoints.push(toI);
+		
+		finalPathPoints = finalPathPoints.map(val => {
+			return {
+				x: this.graphData.points[val][0],
+				y: this.graphData.points[val][1]}
+		});
+		
+		console.log("final path", finalPath);
+		console.log("intersections", intersections);
+		console.log("finalPath", finalPathPoints);
+
+		let resultGraph = new MapGraph()
+		resultGraph.setDots(finalPathPoints);
+		
+		resultGraph.setMaterial({color: "#e77ea0", linewidth: 10})
+		
+		return resultGraph;
 	}
 	
 	importGraph(data: {
@@ -138,11 +275,6 @@ export default class GraphWrapper {
 		return false;
 	}
 	
-	// for selecting point with cursor
-	selectPoint(x: number, y: number) {
-		
-	}
-	
 	// move selected point
 	followCursor(x: number, y: number) {
 		
@@ -161,19 +293,7 @@ export default class GraphWrapper {
 		this.lines[this.selectedLine].geometry.verticesNeedUpdate = true
 	}
 	
-	putRandomPoint() {
-		if(this.lines.length == 0) {
-			this.lines.push(new MapGraph())
-			this.selectedLine = 0
-			this.selectedPoint = 0
-		}
-		this.lines[this.selectedLine].putPoint({x: Math.random() * 20 - 10, y: Math.random() * 20 - 10});
-	}
-	
 	click(x: number, y: number) {
-		
-
-		
 		// if graph is empty
 		if(this.lines.length == 0) {
 			this.lines.push(new MapGraph())

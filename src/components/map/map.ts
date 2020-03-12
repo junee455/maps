@@ -58,6 +58,10 @@ export default class Map extends Vue{
 			bottomMenuShown: true,
 			// "cabinets" | "graph"
 			currentEditor: "cabinets",
+			fromPoint: undefined,
+			toPoint: undefined,
+			findWayEngaged: true,
+			wayPath: undefined
 		}
 	}
 	
@@ -107,10 +111,10 @@ export default class Map extends Vue{
 		window.addEventListener('keypress', (key) => {
 			if(key.key == "Delete") {
 				let activeDropDown = this.activeDropDown
-				// this.deletePoint(this.activeDropDown, this.focusedFloor);
-				// if(activeDropDown >= this.cabinetsData[this.focusedFloor].length)
-				// 	activeDropDown = this.cabinetsData[this.focusedFloor].length - 1;
-				// this.activeDropDown = activeDropDown;
+				this.deletePoint(this.activeDropDown, this.focusedFloor);
+				if(activeDropDown >= this.cabinetsData[this.focusedFloor].length)
+					activeDropDown = this.cabinetsData[this.focusedFloor].length - 1;
+				this.activeDropDown = activeDropDown;
 			}
 		});
 		
@@ -175,7 +179,7 @@ export default class Map extends Vue{
 		window.addEventListener('click', (ev: any) => {
 			let x, y
 
-			if(x < canvasEl.offsetLeft) {
+			if(ev.clientX < canvasEl.offsetLeft) {
 				return
 			}
 			
@@ -194,7 +198,7 @@ export default class Map extends Vue{
 				})
 				if(index !== undefined)
 					this.activeDropDown = index
-			} else {
+			} else if(this.currentEditor == "graph") {
 				if(ev.clientX < canvasEl.offsetLeft)
 					return
 				
@@ -219,6 +223,18 @@ export default class Map extends Vue{
 				// graphs[this.focusedFloor].putPoint({x: (x - canvasEl.scrollWidth / 2) / camera.zoom,
 				// 																		y: (-y + canvasEl.scrollHeight / 2) / camera.zoom});
 				
+			}
+			if(this.findWayEngaged) {
+				
+				x = ev.clientX - canvasEl.offsetLeft
+				y = ev.clientY
+				
+				// compute real coordinates
+				x = (x - canvasEl.scrollWidth / 2) / camera.zoom
+				y = (-y + canvasEl.scrollHeight / 2) / camera.zoom
+
+				
+				this.findWay(x, y)
 			}
 			
 
@@ -280,6 +296,9 @@ export default class Map extends Vue{
 				graphs[this.focusedFloor].lines.map(val => {
 					render.render(val.dotsScene, camera);
 				})
+				if(this.wayPath) {
+					render.render(this.wayPath.dotsScene, camera);
+				}
 					// render.render(graphs[this.focusedFloor].dotsScene, camera);
 				// }
 			}
@@ -291,6 +310,19 @@ export default class Map extends Vue{
 			
 		}
 		animate();
+	}
+	
+	findWay(x, y) {
+		if(this.focusedFloor == undefined)
+			return
+		
+		if(!this.fromPoint) {
+			this.fromPoint = {x: x, y: y}
+		} else if(!this.toPoint) {
+			this.toPoint = {x: x, y: y}
+			this.wayPath = graphs[this.focusedFloor].findPath(this.fromPoint, this.toPoint);
+			this.fromPoint = this.toPoint = undefined
+		}
 	}
 	
 	constructor() {
@@ -354,11 +386,6 @@ export default class Map extends Vue{
 		
 	}
 	
-	// graph wrapper
-	
-	
-	
-	//* graph wrapper
 
 	downloadLayout() {
 		let data = "data:text/json;charset=utf-8," + JSON.stringify({cabinets: this.cabinetsData,
