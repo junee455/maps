@@ -308,7 +308,8 @@ export default class Map extends Vue{
 			if(this.wayPath) {
 				this.wayPath.dotsScene.rotation.x = theMap.wholeGroup.rotation.x - 90 / 180 * Math.PI;
 				this.wayPath.dotsScene.rotation.z = theMap.wholeGroup.rotation.y
-				this.wayPath.dotsScene.position.y = -10
+				if(this.focusedFloor === undefined)
+					this.wayPath.dotsScene.position.y = -10
 				// this.wayPath.dotsScene.rotation.z = theMap.wholeGroup.rotation.z
 					render.render(this.wayPath.dotsScene, camera);
 			}
@@ -335,14 +336,15 @@ export default class Map extends Vue{
 	}
 	
 	findWay(x, y) {
-		// if(this.focusedFloor == undefined)
-			// return
+		let index = this.focusedFloor
+		if(this.focusedFloor == undefined)
+			index = 1
 		
 		if(!this.fromPoint) {
 			this.fromPoint = {x: x, y: y}
 		} else if(!this.toPoint) {
 			this.toPoint = {x: x, y: y}
-			this.wayPath = graphs[1].findPath(this.fromPoint, this.toPoint);
+			this.wayPath = graphs[index].findPath(this.fromPoint, this.toPoint);
 			this.fromPoint = this.toPoint = undefined
 		}
 	}
