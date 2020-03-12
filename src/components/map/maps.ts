@@ -62,6 +62,7 @@ export class FloorMap {
         if(this.focused)
         return
         
+			
         if(this.wholeGroup) {
             this.wholeGroup.rotation.x += x / 180 * Math.PI;
             this.wholeGroup.rotation.y += y / 180 * Math.PI;

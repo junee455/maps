@@ -293,14 +293,22 @@ export default class Map extends Vue{
 			if(this.focusedFloor !== undefined) {
 				// if(dotsScene[this.focusedFloor]) {
 				render.render(cabinets[this.focusedFloor].dotsScene, camera);
-				graphs[this.focusedFloor].lines.map(val => {
-					render.render(val.dotsScene, camera);
-				})
-				if(this.wayPath) {
-					render.render(this.wayPath.dotsScene, camera);
-				}
+				// graphs[this.focusedFloor].lines.map(val => {
+				// 	render.render(val.dotsScene, camera);
+				// })
+
 					// render.render(graphs[this.focusedFloor].dotsScene, camera);
 				// }
+			}
+			
+			render.getContext().clear(render.getContext().DEPTH_BUFFER_BIT)
+			
+			if(this.wayPath) {
+				this.wayPath.dotsScene.rotation.x = theMap.wholeGroup.rotation.x - 90 / 180 * Math.PI;
+				this.wayPath.dotsScene.rotation.z = theMap.wholeGroup.rotation.y
+				this.wayPath.dotsScene.position.y = -10
+				// this.wayPath.dotsScene.rotation.z = theMap.wholeGroup.rotation.z
+					render.render(this.wayPath.dotsScene, camera);
 			}
 			
 			// if(this.currentEditor == "graph") {
@@ -311,6 +319,7 @@ export default class Map extends Vue{
 		}
 		animate();
 	}
+	
 	
 	findWay(x, y) {
 		if(this.focusedFloor == undefined)

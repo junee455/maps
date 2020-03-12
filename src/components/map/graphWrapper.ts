@@ -177,6 +177,7 @@ export default class GraphWrapper {
 				getPointsRange(val, intersections[index + 1], finalPath[index]).map(_val => finalPathPoints.push(_val));
 		})
 		
+		finalPathPoints.push(intersections[intersections.length - 1]);
 		finalPathPoints.push(toI);
 		
 		finalPathPoints = finalPathPoints.map(val => {
@@ -192,7 +193,7 @@ export default class GraphWrapper {
 		let resultGraph = new MapGraph()
 		resultGraph.setDots(finalPathPoints);
 		
-		resultGraph.setMaterial({color: "#e77ea0", linewidth: 10})
+		resultGraph.setMaterial({color: "#e77ea0", linewidth: 10, linejoin: "round"})
 		
 		return resultGraph;
 	}
