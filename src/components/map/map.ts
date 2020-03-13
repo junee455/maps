@@ -2,10 +2,8 @@ import * as THREE from 'three'
 import { FloorMap, initMask, disposeMask } from './maps';
 import { MapDots, MapGraph } from './dots';
 import GraphWrapper from './graphWrapper';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import axios from 'axios';
 import Vue from 'vue';
-import {Watch, Component} from 'vue-property-decorator';
 
 let theMap: FloorMap = new FloorMap()
 theMap.floorHeight = 40;
@@ -18,10 +16,6 @@ let graphsData: Array<any> = []
 
 let cabinets: Array<MapDots>
 let graphs: Array<GraphWrapper>
-
-let fileLoaded = false;
-
-let graphRawData
 
 export default Vue.extend({
 	
@@ -179,12 +173,12 @@ export default Vue.extend({
 			}
 		})
 		
-		// canvasEl.addEventListener('wheel', (e) => {
-		// 	camera.zoom -= e.deltaY * 0.001;
+		canvasEl.addEventListener('wheel', (e) => {
+			camera.zoom -= e.deltaY * 0.001;
 		
-		// 	camera.updateProjectionMatrix();
+			camera.updateProjectionMatrix();
 		
-		// })
+		})
 		
 		camera = new THREE.OrthographicCamera( canvasEl.scrollWidth / -2,
 																					 canvasEl.scrollWidth / 2,
@@ -400,7 +394,6 @@ export default Vue.extend({
 		findWayButton() {
 			if(this.toCabinet !== undefined && this.fromCabinet !== undefined) {
 				this.fromPoint = this.toPoint = undefined
-
 				
 				
 				this.findWay(...cabinetsData[1].find(val => val.number == this.fromCabinet).pos)
