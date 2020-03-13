@@ -68,7 +68,7 @@ export default Vue.extend({
 			fromPoint: undefined,
 			toPoint: undefined,
 			findWayEngaged: true,
-			wayPath: undefined,
+			wayPath: [],
 			toCabinet: undefined,
 			fromCabinet: undefined
 		}
@@ -300,25 +300,22 @@ export default Vue.extend({
 			disposeMask(render);
 			context.clear(context.DEPTH_BUFFER_BIT || context.STENCIL_BUFFER_BIT);
 			if(this.focusedFloor !== undefined) {
-				// if(dotsScene[this.focusedFloor]) {
 				render.render(cabinets[this.focusedFloor].dotsScene, camera);
 				// graphs[this.focusedFloor].lines.map(val => {
 				// 	render.render(val.dotsScene, camera);
 				// })
 
 				// render.render(graphs[this.focusedFloor].dotsScene, camera);
-				// }
 			}
 			
 			render.getContext().clear(render.getContext().DEPTH_BUFFER_BIT)
 			
-			if(this.wayPath) {
-				this.wayPath.dotsScene.rotation.x = theMap.wholeGroup.rotation.x - 90 / 180 * Math.PI;
-				this.wayPath.dotsScene.rotation.z = theMap.wholeGroup.rotation.y
-				if(this.focusedFloor === undefined)
-					this.wayPath.dotsScene.position.y = -10
-				// this.wayPath.dotsScene.rotation.z = theMap.wholeGroup.rotation.z
-				render.render(this.wayPath.dotsScene, camera);
+			if(this.wayPath.length) {
+				let graphToRender = this.wayPath.slice(-1)[0]
+				graphToRender.dotsScene.rotation.x = -theMap.wholeGroup.rotation.x + 90 / 180 * Math.PI
+				graphToRender.dotsScene.rotation.z = theMap.wholeGroup.rotation.y
+				
+				render.render(graphToRender.dotsScene, camera);
 			}
 			
 			// if(this.currentEditor == "graph") {
@@ -392,25 +389,74 @@ export default Vue.extend({
 	
 	methods: {
 		findWayButton() {
+			
 			if(this.toCabinet !== undefined && this.fromCabinet !== undefined) {
 				this.fromPoint = this.toPoint = undefined
 				
+				let fromFloor, toFloor
 				
-				this.findWay(...cabinetsData[1].find(val => val.number == this.fromCabinet).pos)
-				this.findWay(...cabinetsData[1].find(val => val.number == this.toCabinet).pos)
+				let fromPos, toPos
+				this.wayPath = []
+				
+				cabinetsData.map((floor, index) => {
+					floor.map(val => {
+						if(val.number == this.fromCabinet) {
+							fromFloor = index
+							fromPos = val.pos
+						} else if(val.number == this.toCabinet) {
+							toFloor = index
+							toPos = val.pos
+						}
+					})
+				})
+				
+				if(fromFloor == toFloor) {
+					this.findWay(...fromPos, toFloor)
+					this.findWay(...toPos, toFloor)
+				} else {
+					// find closest ladder
+					let fromLadder, toLadder
+					cabinetsData[fromFloor].map(val => {
+						if(val.number.split('_')[0] == 'ladder') {
+							let distance = (val.pos[0] - fromPos[0]) ** 2 + (val.pos[1] - fromPos[1]) ** 2
+							if(!fromLadder)
+								fromLadder = val.pos
+							if(distance < (fromLadder[0] - fromPos[0]) ** 2 + (fromLadder[1] - fromPos[1]) ** 2) {
+								fromLadder = val.pos
+								toLadder = cabinetsData[toFloor].find(_val => _val.number == val.number).pos
+							}
+						}
+					})
+					console.log(fromPos, fromLadder, toLadder, toPos);
+					// ladders found
+					this.findWay(...fromPos, fromFloor)
+					this.findWay(...fromLadder, fromFloor)
+					let connection = new MapGraph()
+					// , z: -theMap.floorHeight * (fromFloor - theMap.floors.length / 2) - 10
+					// , z: -theMap.floorHeight * (toFloor - theMap.floors.length / 2) - 10
+					connection.setDots([{x: fromLadder[0], y: fromLadder[1], z: -theMap.floorHeight * (fromFloor - theMap.floors.length / 2) - 10},
+															{x: fromLadder[0], y: fromLadder[1], z: -theMap.floorHeight * (toFloor - theMap.floors.length / 2) - 10}])
+					connection.setMaterial({color: "#e77ea0", linewidth: 10, linejoin: "round"});
+					// this.wayPath.push(connection);
+					this.findWay(...fromLadder, toFloor)
+					this.findWay(...toPos, toFloor)
+					connection.dotsScene.add(this.wayPath[0].pointsInstance, this.wayPath[1].pointsInstance)
+					this.wayPath.push(connection);
+
+
+				}
 			}
 		},
 		
-		findWay(x, y) {
-			let index = this.focusedFloor
-			if(this.focusedFloor == undefined)
-				index = 1
+		findWay(x, y, index) {
 			
 			if(!this.fromPoint) {
 				this.fromPoint = {x: x, y: y}
 			} else if(!this.toPoint) {
 				this.toPoint = {x: x, y: y}
-				this.wayPath = graphs[index].findPath(this.fromPoint, this.toPoint);
+				let wayGraph = graphs[index].findPath(this.fromPoint, this.toPoint)
+				wayGraph.pointsInstance.translateZ(-theMap.floorHeight * (index - theMap.floors.length / 2) - 10)
+				this.wayPath.push(wayGraph);
 				this.fromPoint = this.toPoint = undefined
 			}
 		},

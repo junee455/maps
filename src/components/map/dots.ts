@@ -17,7 +17,7 @@ export class Dots {
 	}
 	
 	
-	setDots(dots: Array<{x: number, y: number}>) {
+	setDots(dots: Array<{x: number, y: number, z: number}>) {
 		this.dots = dots;
 		
 		this.geometry.dispose();
@@ -26,7 +26,7 @@ export class Dots {
 		this.geometry = new THREE.Geometry();
 		
 		this.dots.map(val => {
-			this.geometry.vertices.push(new THREE.Vector3(val.x, val.y, 0));
+			this.geometry.vertices.push(new THREE.Vector3(val.x, val.y, val.z));
 		})
 		// apply new geometry
 		this.updateInstance();

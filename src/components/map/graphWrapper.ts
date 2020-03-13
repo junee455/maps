@@ -169,7 +169,17 @@ export default class GraphWrapper {
 				[end, start] = [start, end]
 				reverse = true
 			}
-			return reverse ? this.graphData.lines[line].slice(start, end).reverse() : this.graphData.lines[line].slice(start, end);
+			let result = this.graphData.lines[line].slice(start, end);
+
+			// if line is ring
+			if(this.graphData.lines[line][0] == this.graphData.lines[line].slice(-1)[0]) {
+				
+				let _result = this.graphData.lines[line].slice(end).concat(this.graphData.lines[line].slice(1, start));
+				if(_result.length < result.length)
+					result = _result.reverse();
+			}
+			
+			return reverse ? result.reverse() : result;
 		}
 		
 		intersections.map((val, index) => {

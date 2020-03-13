@@ -219,7 +219,6 @@ export class FloorMap {
                 floor: currentFloorPolygon,
                 rendered: true
             });
-            
             this.floors.map((val, index) => {
                 let buildingHeight = this.floors.length * this.floorHeight;
                 val.map.position.y = -buildingHeight / 2 + this.floorHeight * index;
