@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 export class Dots {
-	dots: Array<{x: number, y: number}>
+	dots: Array<any>
 	dotsScene: THREE.Scene | undefined
 	geometry: THREE.Geometry | undefined
 	pointsInstance: THREE.Points | THREE.Line | undefined
@@ -17,7 +17,7 @@ export class Dots {
 	}
 	
 	
-	setDots(dots: Array<{x: number, y: number, z: number}>) {
+	setDots(dots: Array<any>) {
 		this.dots = dots;
 		
 		this.geometry.dispose();
