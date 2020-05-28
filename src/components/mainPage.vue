@@ -7,7 +7,8 @@
 			<div style="display: flex">
 				<a class="button--round"
 					 href="/login">login</a>
-				<a class="button--round">register</a>
+				<a class="button--round"
+					 href="/register">register</a>
 			</div>
 		</div>
 		<div class="main-content">
@@ -25,7 +26,8 @@
 				<div class="step3"></div>
 			</div>
 		</div>
-		<a class="try-now">Try now</a>
+		<a class="try-now"
+			 href="/demo">Try now</a>
 		<div class="footer">
 			<a style="display: flex"
 				 href="https://github.com/junee455/maps">
@@ -45,7 +47,8 @@
  export default class MainPage extends Vue {}
 </script>
 
-<style lang="scss">
+<style lang="scss"
+scoped>
  @import "@/global.scss";
  
  * {

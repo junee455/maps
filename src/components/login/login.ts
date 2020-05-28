@@ -2,7 +2,7 @@ import Vue from 'vue';
 import axios from 'axios'
 
 export default Vue.extend({
-	// name: 'login',
+	name: 'login',
 
 	data() {
 		return {
@@ -20,6 +20,8 @@ export default Vue.extend({
 				if(!!query) {
 					this.$router.push(query)
 					this.$router.forward()
+				} else {
+					this.$router.push('/cabinet')
 				}
 
 			})
