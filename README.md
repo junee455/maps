@@ -1,1 +1,1 @@
-![](internal maps demo.gif)
+![map demo](./internal\ maps\ demo.gif)
