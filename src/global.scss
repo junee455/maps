@@ -1,3 +1,8 @@
+$background-main: #002b36;
+$background-1: #586e75;
+$background-2: #93a1a1;
+$foreground: #fdf6e3;
+
 * {
 	position: relative;
 	font-family: 'Roboto', sans-serif;
@@ -19,4 +24,51 @@
 	padding: 0;
 	border: none;
 	box-sizing: border-box;
+}
+
+// generics
+
+%button--generic {
+		outline-color: $foreground;
+		cursor: pointer;
+}
+
+.button--round {
+		@extend %button--generic;
+		padding: 5px;
+		padding-left:8px;
+		padding-right: 8px;
+		border-radius: 3px;
+		background-color: $background-1;
+		&:hover {
+				color: $background-1;
+				background-color: $foreground;
+		}
+}
+
+.button--underlined {
+		@extend %button--generic;
+		border-bottom: 4px solid $foreground;
+		&:hover {
+				color: $background-main;
+				background-color: $foreground;
+		}
+}
+
+.margin-c {
+		margin-left: auto;
+		margin-right: auto;
+}
+
+input {
+		border: none;
+		margin: 5px;
+		padding: 5px;
+}
+
+button {
+		border: none;
+		padding: 0;
+		outline-color: $foreground;
+		background-color: inherit;
 }
