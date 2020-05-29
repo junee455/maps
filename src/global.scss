@@ -5,6 +5,8 @@ $foreground: #fdf6e3;
 $red-dark: #9E566D;
 $red: #E77EA0;
 
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400&display=swap');
+
 * {
 	position: relative;
 	font-family: 'Roboto', sans-serif;
@@ -31,6 +33,7 @@ $red: #E77EA0;
 // generics
 
 %button--generic {
+		transition: 0.2s;
 		outline-color: $foreground;
 		cursor: pointer;
 }

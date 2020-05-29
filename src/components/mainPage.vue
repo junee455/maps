@@ -3,7 +3,7 @@
 		<div class="header">
 			<div class="main-logo"></div>
 			<div class="title">Intermaps</div>
-			<div class="subtitle">interactive indoor maps <br/> delivery service</div>
+			<div class="subtitle"></div>
 			<div style="display: flex">
 				<a class="button--round"
 					 href="/login">login</a>
@@ -11,7 +11,9 @@
 					 href="/register">register</a>
 			</div>
 		</div>
+		<div class="subtitle">interactive indoor maps delivery service</div>
 		<div class="main-content">
+
 			<div class="dashed-line"></div>
 			<div>
 				<div>Create a 3D model</div>
@@ -48,7 +50,7 @@
 </script>
 
 <style lang="scss"
-scoped>
+			 scoped>
  @import "@/global.scss";
  
  * {
@@ -75,6 +77,7 @@ scoped>
 		 font-size: 42px;
 		 width: 215.88px;
 		 height: 88px;
+		 color: white;
 		 box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25), inset 0px 0px 40px #CE5C5C;
 		 &:hover {
 				 box-shadow: none;
@@ -104,6 +107,7 @@ scoped>
  }
  
  .main-content {
+		 color: rgba(#000000, 0.75);
 		 margin-top: 3em;
 		 margin-bottom: 3em;
 		 display: grid;
@@ -163,7 +167,6 @@ scoped>
  }
  
  .footer {
-
 		 align-items: baseline;
 		 width: 100%;
 		 position: fixed;
@@ -176,23 +179,33 @@ scoped>
 		 font-size: 32px;
  }
  
+ 
+ .subtitle {
+		 margin-top: 1em;
+		 margin-bottom: -1em;
+		 color: rgba(#000000, 0.75);
+		 /* 				 position: absolute; */
+		 margin-right: auto;
+		 margin-left: auto;
+		 align-self: center;
+		 text-align: center;
+		 flex-grow: 999;
+		 font-size: 32px;
+ }
+ 
  .header {
 		 display: flex;
 		 justify-content: space-between;
-		 color: $foreground;
 		 background-color: $background-main;
 		 font-size: 32px;
-		 .subtitle {
-				 /* 				 position: absolute; */
-				 margin-right: auto;
-				 margin-left: auto;
-				 align-self: center;
-				 text-align: center;
-				 flex-grow: 999;
-		 }
+		 color: $foreground;
+
 		 .title {
+				 font-family: 'Roboto Slab', serif;
 				 font-size: 73px;
 				 align-self: center;
+				 margin-bottom: 0.13em;
+				 margin-top: -0.13em;
 		 }
 		 .button--round {
 				 font-size: 32px;

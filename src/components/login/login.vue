@@ -1,5 +1,11 @@
 <template>
 	<div>
+		<div class="header">
+			<a class="main-logo"
+				 href="/"></a>
+			<a class="title"
+				 href="/">Intermaps</a>
+		</div>
 		<div class="login-content">
 			<div>
 				<div>E-mail</div>
@@ -21,9 +27,9 @@
 </template>
 
 <script lang="ts"
-				src="./login.ts"></script>
+							src="./login.ts"></script>
 
-<style lang="scss">
+<style lang="scss" scoped>
  @import "@/global.scss";
 
  .login-content {
@@ -62,4 +68,32 @@
 				 justify-content: space-between;
 		 }
  }
+ 
+ .header {
+		 display: flex;
+		 color: $foreground;
+		 background-color: $background-main;
+		 .title {
+				 font-family: 'Roboto Slab', serif;
+				 font-size: 32px;
+				 align-self: center;
+		 }
+ }
+ 
+ a {
+		 color: $foreground;
+		 text-decoration: none;
+ }
+ 
+ .main-logo {
+		 background-image: url('~@/assets/logo.png');
+		 background-repeat: no-repeat;
+		 background-position: center;
+		 background-size: contain;
+		 content: "";
+		 width: 50px;
+		 height: 50px;
+		 align-self: center;
+ }
+ 
 </style>
